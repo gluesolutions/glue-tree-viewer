@@ -4,6 +4,7 @@ from glue.core.component_id import ComponentID
 from glue.core.data import BaseCartesianData
 from glue.utils import view_shape
 import ete3
+import viewer
 
 
 # QUESTION
@@ -14,7 +15,7 @@ class TreeData(BaseCartesianData):
     def __init__(self):
         super(TreeData, self).__init__()
         self.data_cid = ComponentID(label='tree data componentid label', parent=self)
-        self.data = ete3.Tree("(A:1,(B:1,(E:1,D:1)Internal_1:0.5)Internal_2:0.5)Root;", format=1)
+        self.tdata = ete3.Tree("(A:1,(B:1,(E:1,D:1)Internal_1:0.5)Internal_2:0.5)Root;", format=1)
     @property
     def label(self):
         return "Tree Data label"
