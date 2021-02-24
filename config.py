@@ -5,6 +5,7 @@ from glue.core.data import BaseCartesianData
 from glue.utils import view_shape
 import ete3
 import viewer
+from glue import qglue
 
 
 # QUESTION
@@ -12,10 +13,10 @@ import viewer
 # into Cartesian api
 # (second paragrpah of http://docs.glueviz.org/en/stable/developer_guide/data.html)
 class TreeData(BaseCartesianData):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super(TreeData, self).__init__()
         self.data_cid = ComponentID(label='tree data componentid label', parent=self)
-        self.tdata = ete3.Tree("(A:1,(B:1,(E:1,D:1)Internal_1:0.5)Internal_2:0.5)Root;", format=1)
+        self.tdata = ete3.Tree(*args, **kwargs)
     @property
     def label(self):
         return "Tree Data label"
@@ -66,10 +67,12 @@ class TreeData(BaseCartesianData):
 
         raise Exception('tree data histogram not yet defined')
 
-from glue.core import DataCollection
-from glue.app.qt.application import GlueApplication
+    
+from glue.config import data_factory
 
-d = TreeData()
-dc = DataCollection([d])
-ga = GlueApplication(dc)
-ga.start()
+def is_newick(fname, **kwargs):
+    return filename.endswith('nw')
+
+@data_factory('Newick tree loader', is_newick)
+def read_newick(fname):
+    return TreeData(fname, format=3)
