@@ -38,7 +38,10 @@ from glue.viewers.common.layer_artist import LayerArtist
 class TreeLayerArtist(LayerArtist):
     __layer_artist_cls = TreeLayerState
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, axes, *args, **kwargs):
+        print('args', args)
+        print('kwargs', kwargs)
+        #del kwargs['layer_state'] # BUG
         super(TreeLayerArtist, self).__init__(*args, **kwargs)
 
     def clear(self):
@@ -87,6 +90,7 @@ class TreeViewerStateWidget(QWidget):
 from glue.viewers.common.qt.data_viewer import DataViewer
 from matplotlib import pyplot as plt
 
+
 class TreeDataViewer(DataViewer):
     LABEL = 'ete3 based Tree Viewer'
     _state_cls = TreeViewerState
@@ -108,6 +112,8 @@ class TreeDataViewer(DataViewer):
         return cls(self.axes, self.state, layer=layer, layer_state=layer_state)
 
 
+# QUESTION: how to make tree data choose this viewer automatically (is it in viewer code or data code)
+# PROBLEM: does not recognize .nw files as treedata, only works if you choose newick file in dropdown
 
 from glue.config import qt_client
 qt_client.add(TreeDataViewer)
