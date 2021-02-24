@@ -8,21 +8,18 @@
 from glue.viewers.common.state import ViewerState
 from glue.external.echo import CallbackProperty
 
+from ete3.treeview.qt4_render import _TreeScene, render, get_tree_img_map, init_tree_style
+
 class TreeViewerState(ViewerState):
     scale_att = CallbackProperty(docstring='The scale of the tree')
-    fill = CallbackProperty(docstring='Draw the glyphs of nodes in tree')
 
     def scale_att_callback(value):
         print('new scale value is ', value)
-
-    def fill_att_callback(value):
-        print('new draw heads value is ', value)
 
     def __init__(self, *args, **kwargs):
         # QUESTION: sometimes `, self` is required in super call, sometimes not
         super(TreeViewerState).__init__(*args, **kwargs)
         self.add_callback('scale_att', self.scale_att_callback)
-        self.add_callback('fill', self.fill_att_callback)
 
 # -- LAYER STATE
 from glue.viewers.common.state import LayerState
@@ -30,13 +27,13 @@ from glue.viewers.common.state import LayerState
 class TreeLayerState(LayerState):
     # not sure what layers mean in tree context yet
     # maybe this will include just drawing parameters like node size, node glyph settings, branch label, etc
-    pass
+    fill = CallbackProperty(False, docstring='Draw the glyphs of nodes in tree')
 
 # -- LAYER ARTIST
 from glue.viewers.common.layer_artist import LayerArtist
 
 class TreeLayerArtist(LayerArtist):
-    __layer_artist_cls = TreeLayerState
+    _layer_state_cls = TreeLayerState
 
     def __init__(self, axes, *args, **kwargs):
         print('args', args)
@@ -62,7 +59,7 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout, QCheckBox
 class TreeLayerStateWidget(QWidget):
     def __init__(self, layer_artist):
         # QUESTION: why is LayerEditWidget different from QWidget ??
-        super(LayerEditWidget, self).__init__()
+        super(TreeLayerStateWidget, self).__init__()
 
         # TODO: reconcile this with above class which had scale option
         self.checkbox = QCheckBox('draw node heads')
@@ -117,3 +114,7 @@ class TreeDataViewer(DataViewer):
 
 from glue.config import qt_client
 qt_client.add(TreeDataViewer)
+
+# {TODO}
+# - find self.axes.figure.canvas equivalent for setCentralWidget in ete
+
