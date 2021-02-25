@@ -17,6 +17,7 @@ class TreeData(BaseCartesianData):
         super(TreeData, self).__init__()
         self.data_cid = ComponentID(label='tree data componentid label', parent=self)
         self.tdata = ete3.Tree(*args, **kwargs)
+
     @property
     def label(self):
         return "Tree Data label"
@@ -66,6 +67,9 @@ class TreeData(BaseCartesianData):
                           subset_state=None, subset_group=None):
 
         raise Exception('tree data histogram not yet defined')
+
+    def get_ete_tree(self):
+        return self.tdata
 
     
 from glue.config import data_factory

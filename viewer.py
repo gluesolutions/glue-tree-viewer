@@ -9,6 +9,7 @@ from glue.viewers.common.state import ViewerState
 from glue.external.echo import CallbackProperty
 
 from ete3.treeview.qt4_render import _TreeScene, render, get_tree_img_map, init_tree_style
+import ete3
 
 class TreeViewerState(ViewerState):
     scale_att = CallbackProperty(docstring='The scale of the tree')
@@ -39,6 +40,7 @@ class TreeLayerArtist(LayerArtist):
         print('args', args)
         print('kwargs', kwargs)
         #del kwargs['layer_state'] # BUG
+        print('thingsi have', self.__dir__)
         super(TreeLayerArtist, self).__init__(*args, **kwargs)
 
     def clear(self):
@@ -54,7 +56,7 @@ class TreeLayerArtist(LayerArtist):
 # --- LayerStateWidget
 
 from glue.external.echo.qt import connect_checkable_button
-from qtpy.QtWidgets import QWidget, QVBoxLayout, QCheckBox
+from qtpy.QtWidgets import QWidget, QVBoxLayout, QCheckBox, QGraphicsScene, QGraphicsView
 
 class TreeLayerStateWidget(QWidget):
     def __init__(self, layer_artist):
@@ -101,12 +103,27 @@ class TreeDataViewer(DataViewer):
     def __init__(self, *args, **kwargs):
         super(TreeDataViewer, self).__init__(*args, **kwargs)
         self.axes = plt.subplot(1, 1, 1)
-        self.setCentralWidget(self.axes.figure.canvas)
+        # maybe set central widget here as empty, then add data later?
+        self.scene = QGraphicsScene()
+        self.view = QGraphicsView()
+        self.view.setScene(self.scene)
+        self.setCentralWidget(self.view)
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         # QUESTION: is cls gonna TreeLayerArtist? and do i need to update its constructor to include axes and state argument?
         # QUESTION: also, where does self.state come from? guess: from superclass, Viewer, and is an instantiation of TreeViewerState
         return cls(self.axes, self.state, layer=layer, layer_state=layer_state)
+
+    def add_data(self, data):
+        self.data = data
+        print('data added', data)
+
+        # put ete3 code here
+        ts = ete3.TreeStyle()
+        qgraphicsrectitem, _, _ = render(self.data.get_ete_tree(), ts, )
+        self.scene.addItem(qgraphicsrectitem)
+
+        return True
 
 
 # QUESTION: how to make tree data choose this viewer automatically (is it in viewer code or data code)
@@ -116,5 +133,7 @@ from glue.config import qt_client
 qt_client.add(TreeDataViewer)
 
 # {TODO}
+# - find out where its getting the data
 # - find self.axes.figure.canvas equivalent for setCentralWidget in ete
 
+# BUG: we can't save the session
