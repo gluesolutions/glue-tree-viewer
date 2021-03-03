@@ -63,7 +63,7 @@ class TreeData(BaseCartesianData):
 
         raise Exception('tree data statistic operations not yet defined')
 
-    def compute_histogram(self ,cid, range=None, bins=None, log=False,
+    def compute_histogram(self, cid, range=None, bins=None, log=False,
                           subset_state=None, subset_group=None):
 
         raise Exception('tree data histogram not yet defined')
@@ -71,11 +71,13 @@ class TreeData(BaseCartesianData):
     def get_ete_tree(self):
         return self.tdata
 
-    
+
 from glue.config import data_factory
 
+
 def is_newick(fname, **kwargs):
-    return filename.endswith('nw')
+    return fname.endswith('.nw')
+
 
 @data_factory('Newick tree loader', is_newick)
 def read_newick(fname):
