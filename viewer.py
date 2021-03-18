@@ -6,10 +6,16 @@ from glue.viewers.common.state import ViewerState
 from glue.external.echo import CallbackProperty
 from glue.core.data_combo_helper import ComponentIDComboHelper
 
-from ete3.treeview.qt4_render import _TreeScene, render, get_tree_img_map, init_tree_style
+from ete3.treeview.qt4_render import (
+    _TreeScene,
+    render,
+    get_tree_img_map,
+    init_tree_style,
+)
 from ete3.treeview.qt4_gui import _TreeView
 
 import ete3
+
 
 class TreeViewerState(ViewerState):
     _delayed_properties = []
@@ -19,14 +25,15 @@ class TreeViewerState(ViewerState):
     scale_att = CallbackProperty(False)
 
     def scale_att_callback(self, value):
-        print('new scale value is ', value)
+        print("new scale value is ", value)
 
     def __init__(self, *args, **kwargs):
         # QUESTION: sometimes `, self` is required in super call, sometimes not
         super(TreeViewerState).__init__(*args, **kwargs)
-        self.add_callback('scale_att', self.scale_att_callback)
-        #self._scale_att_helper = ComponentIDComboHelper(self, 'scale_att')
-        print('added callback')
+        self.add_callback("scale_att", self.scale_att_callback)
+        # self._scale_att_helper = ComponentIDComboHelper(self, 'scale_att')
+        print("added callback")
+
 
 # -- LAYER STATE
 from glue.viewers.common.state import LayerState
@@ -35,37 +42,48 @@ from glue.viewers.common.state import LayerState
 class TreeLayerState(LayerState):
     # not sure what layers mean in tree context yet
     # maybe this will include just drawing parameters like node size, node glyph settings, branch label, etc
-    fill = CallbackProperty(False, docstring='Draw the glyphs of nodes in tree')
+    fill = CallbackProperty(False, docstring="Draw the glyphs of nodes in tree")
+
 
 from glue.viewers.common.layer_artist import LayerArtist
+
 
 class TreeLayerArtist(LayerArtist):
     _layer_state_cls = TreeLayerState
 
     def __init__(self, axes, *args, **kwargs):
-        print('args', args)
-        print('kwargs', kwargs)
-        #del kwargs['layer_state'] # BUG
-        print('thingsi have', self.__dir__)
+        print("args", args)
+        print("kwargs", kwargs)
+        # del kwargs['layer_state'] # BUG
+        print("thingsi have", self.__dir__)
         super(TreeLayerArtist, self).__init__(*args, **kwargs)
 
     def clear(self):
-        print('clear1')
+        print("clear1")
 
     def remove(self):
-        print('remove1')
-        
+        print("remove1")
+
     def redraw(self):
-        print('redraw1')
-       
+        print("redraw1")
+
     def update(self):
-        print('update1')
+        print("update1")
+
 
 # -- QT special widgets
 # --- LayerStateWidget
 
 from glue.external.echo.qt import connect_checkable_button, connect_value
-from qtpy.QtWidgets import QWidget, QVBoxLayout, QCheckBox, QGraphicsScene, QGraphicsView, QSlider, QLabel
+from qtpy.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QCheckBox,
+    QGraphicsScene,
+    QGraphicsView,
+    QSlider,
+    QLabel,
+)
 
 
 class TreeLayerStateWidget(QWidget):
@@ -81,7 +99,8 @@ class TreeLayerStateWidget(QWidget):
         self.setLayout(layout)
 
         self.layer_state = layer_artist.state
-        connect_checkable_button(self.layer_state, 'fill', self.checkbox)
+        connect_checkable_button(self.layer_state, "fill", self.checkbox)
+
 
 # --- ViewerStateWidget
 class TreeViewerStateWidget(QWidget):
@@ -92,18 +111,18 @@ class TreeViewerStateWidget(QWidget):
         # so we just have empty layout
         layout = QVBoxLayout()
         self.setLayout(layout)
-        self.checkbox = QCheckBox('sstst')
-        #self.checkbox.setMinimum(0)
-        #self.checkbox.setMaximum(100.0)
-        layout.addWidget(QLabel('thickness of lines'))
+        self.checkbox = QCheckBox("sstst")
+        # self.checkbox.setMinimum(0)
+        # self.checkbox.setMaximum(100.0)
+        layout.addWidget(QLabel("thickness of lines"))
         layout.addWidget(self.checkbox)
 
         self.viewer_state = viewer_state
-        print('viewer_state', viewer_state)
-        print('viewer_statetype', dir(viewer_state))
+        print("viewer_state", viewer_state)
+        print("viewer_statetype", dir(viewer_state))
         viewer_state.scale_att = True
 
-        c1 = connect_checkable_button(self.viewer_state, 'scale_att', self.checkbox)
+        c1 = connect_checkable_button(self.viewer_state, "scale_att", self.checkbox)
         self.checkbox.setChecked(True)
         assert self.viewer_state.scale_att
 
@@ -116,9 +135,8 @@ class TreeViewerStateWidget(QWidget):
         self.viewer_state.scale_att = False
         assert not self.checkbox.isChecked()
 
+        print("connected")
 
-        print('connected')
-        
 
 # -- FINAL: DATA VIEWER CLASS
 from glue.viewers.common.qt.data_viewer import DataViewer
@@ -126,7 +144,7 @@ from matplotlib import pyplot as plt
 
 
 class TreeDataViewer(DataViewer):
-    LABEL = 'ete3 based Tree Viewer'
+    LABEL = "ete3 based Tree Viewer"
     _state_cls = TreeViewerState
 
     _options_cls = TreeViewerStateWidget
@@ -141,9 +159,6 @@ class TreeDataViewer(DataViewer):
         super(TreeDataViewer, self).__init__(*args, **kwargs)
         self.axes = plt.subplot(1, 1, 1)
 
-
-
-
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         # QUESTION: also, where does self.state come from? guess: from superclass, Viewer, and is an instantiation of TreeViewerState
         return cls(self.axes, self.state, layer=layer, layer_state=layer_state)
@@ -151,7 +166,7 @@ class TreeDataViewer(DataViewer):
     def add_data(self, data):
 
         self.data = data
-        print('data added', data)
+        print("data added", data)
 
         # do qt stuff {
 
@@ -163,7 +178,6 @@ class TreeDataViewer(DataViewer):
         self.scene.master_item = None
         self.scene.gui = self
 
-
         self.view = _TreeView(self.scene)
         self.scene.view = self.view
 
@@ -173,12 +187,10 @@ class TreeDataViewer(DataViewer):
 
         # }
 
-
         # {POSA}
 
         # QUESTION: should we use show_tree code drawer.py:73,
         #        or should we use gui class qt4_gui:133
-
 
         return True
 
@@ -187,6 +199,7 @@ class TreeDataViewer(DataViewer):
 # PROBLEM: does not recognize .nw files as treedata, only works if you choose newick file in dropdown
 
 from glue.config import qt_client
+
 qt_client.add(TreeDataViewer)
 
 # BUG: we can't save the session
