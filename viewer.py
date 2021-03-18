@@ -7,6 +7,7 @@ from glue.external.echo import CallbackProperty
 from glue.core.data_combo_helper import ComponentIDComboHelper
 
 from ete3.treeview.qt4_render import _TreeScene, render, get_tree_img_map, init_tree_style
+from ete3.treeview.qt4_gui import _TreeView
 
 import ete3
 
@@ -15,7 +16,7 @@ class TreeViewerState(ViewerState):
     _ignored_properties = []
     _global_callbacks = []
 
-    scale_att = CallbackProperty(False, docstring='The scale of the tree')
+    scale_att = CallbackProperty(False)
 
     def scale_att_callback(self, value):
         print('new scale value is ', value)
@@ -66,7 +67,6 @@ class TreeLayerArtist(LayerArtist):
 from glue.external.echo.qt import connect_checkable_button, connect_value
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QCheckBox, QGraphicsScene, QGraphicsView, QSlider, QLabel
 
-#from glue.viewers.custom.qt import QLabeledSlider
 
 class TreeLayerStateWidget(QWidget):
     def __init__(self, layer_artist):
@@ -74,7 +74,7 @@ class TreeLayerStateWidget(QWidget):
         super(TreeLayerStateWidget, self).__init__()
 
         # TODO: reconcile this with above class which had scale option
-        self.checkbox = QCheckBox('draw node heads')
+        self.checkbox = QCheckBox()
 
         layout = QVBoxLayout()
         layout.addWidget(self.checkbox)
@@ -103,7 +103,20 @@ class TreeViewerStateWidget(QWidget):
         print('viewer_statetype', dir(viewer_state))
         viewer_state.scale_att = True
 
-        connect_checkable_button(self.viewer_state, 'scale_att', self.checkbox)
+        c1 = connect_checkable_button(self.viewer_state, 'scale_att', self.checkbox)
+        self.checkbox.setChecked(True)
+        assert self.viewer_state.scale_att
+
+        self.checkbox.setChecked(False)
+        assert not self.viewer_state.scale_att
+
+        self.viewer_state.scale_att = True
+        assert self.checkbox.isChecked()
+
+        self.viewer_state.scale_att = False
+        assert not self.checkbox.isChecked()
+
+
         print('connected')
         
 
@@ -128,23 +141,44 @@ class TreeDataViewer(DataViewer):
         super(TreeDataViewer, self).__init__(*args, **kwargs)
         self.axes = plt.subplot(1, 1, 1)
 
-        self.scene = QGraphicsScene()
-        self.view = QGraphicsView()
-        self.view.setScene(self.scene)
-        self.setCentralWidget(self.view)
+
+
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         # QUESTION: also, where does self.state come from? guess: from superclass, Viewer, and is an instantiation of TreeViewerState
         return cls(self.axes, self.state, layer=layer, layer_state=layer_state)
 
     def add_data(self, data):
+
         self.data = data
         print('data added', data)
 
-        # put ete3 code here
+        # do qt stuff {
+
+        self.scene = _TreeScene()
+
         ts = ete3.TreeStyle()
-        qgraphicsrectitem, _, _ = render(self.data.get_ete_tree(), ts, )
-        self.scene.addItem(qgraphicsrectitem)
+        self.scene.init_values(self.data.get_ete_tree(), None, ts, None)
+
+        self.scene.master_item = None
+        self.scene.gui = self
+
+
+        self.view = _TreeView(self.scene)
+        self.scene.view = self.view
+
+        self.view.setScene(self.scene)
+
+        self.setCentralWidget(self.view)
+
+        # }
+
+
+        # {POSA}
+
+        # QUESTION: should we use show_tree code drawer.py:73,
+        #        or should we use gui class qt4_gui:133
+
 
         return True
 
@@ -154,8 +188,6 @@ class TreeDataViewer(DataViewer):
 
 from glue.config import qt_client
 qt_client.add(TreeDataViewer)
-
-# {TODO}
 
 # BUG: we can't save the session
 # FEATURE: one of the sliders controlls which cutoff the dendrogram code uses?
