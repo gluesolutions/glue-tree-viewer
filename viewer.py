@@ -162,35 +162,48 @@ class TreeDataViewer(DataViewer):
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         # QUESTION: also, where does self.state come from? guess: from superclass, Viewer, and is an instantiation of TreeViewerState
         return cls(self.axes, self.state, layer=layer, layer_state=layer_state)
+    
+    def _redraw(self):
+        self.scene.draw()
+        self.view.init_values()
 
     def add_data(self, data):
-
         self.data = data
-        print("data added", data)
+        t = self.data.get_ete_tree()
 
         # do qt stuff {
 
-        self.scene = _TreeScene()
+        # show_tree stuff {
 
-        ts = ete3.TreeStyle()
-        self.scene.init_values(self.data.get_ete_tree(), None, ts, None)
+        scene, ts = _TreeScene(), ete3.TreeStyle()
+        self.scene = scene
 
-        self.scene.master_item = None
-        self.scene.gui = self
+        tree_item, n2i, n2f = render(t, ts)
+        scene.init_values(t, ts, n2i, n2f)
 
-        self.view = _TreeView(self.scene)
-        self.scene.view = self.view
-
-        self.view.setScene(self.scene)
-
-        self.setCentralWidget(self.view)
+        tree_item.setParentItem(scene.master_item)
+        scene.addItem(scene.master_item)
 
         # }
 
-        # {POSA}
+        # _GUI class stuff {
+
+        self.scene.GUI = self
+        self.view = _TreeView(self.scene)
+        self.scene.view = self.view
+        self.node_properties = None
+        self.view.prop_table = None
+
+        # }
+
 
         # QUESTION: should we use show_tree code drawer.py:73,
+                        # {POSA}. we are already doing this and it almost works
         #        or should we use gui class qt4_gui:133
+
+        self.setCentralWidget(self.view)
+
+        self._redraw()
 
         return True
 
