@@ -51,7 +51,7 @@ USE_GL = False # Temporarily disabled
 
 from qtpy.QtWidgets import *
 import qtpy.QtCore as QtCore
-from qtpy.QtCore import Qt, QPointF
+from qtpy.QtCore import Qt, QPointF, QLineF
 from qtpy.QtGui import *
 from ete3.treeview.main import save, _leaf
 from ete3.treeview import random_color
@@ -74,23 +74,45 @@ class _SelectorItem(QGraphicsLineItem):
         p.setBrush(QBrush(Qt.NoBrush))
         #p.drawRect(self.rect().x(),self.rect().y(),self.rect().width(),self.rect().height())
         p.drawLine(self.line())
-        return
-        # Draw info text
-        font = QFont("Arial",13)
-        text = "%d selected."  % len(self.get_selected_nodes())
-        textR = QFontMetrics(font).boundingRect(text)
-        if  self.rect().width() > textR.width() and \
-                self.rect().height() > textR.height()/2 and 0: # OJO !!!!
-            p.setPen(QPen(self.Color))
-            p.setFont(QFont("Arial",13))
-            p.drawText(self.rect().bottomLeft().x(),self.rect().bottomLeft().y(),text)
+        self.get_selected_nodes()
 
     def get_selected_nodes(self):
-        print('-- getting selected nodes')
-        selPath = QPainterPath()
-        selPath.addRect(self.rect())
-        self.scene().setSelectionArea(selPath)
-        selectednodes = [i.node for i in self.scene().selectedItems()]
+        #print('-- getting selected nodes')
+        #selPath = QPainterPath()
+        #selPath.addLine(self.line())
+        #self.scene().setSelectionArea(selPath)
+
+        n2i = self.scene().n2i
+        selectednodes = []
+        for node, item in n2i.items():
+            #print('node items')
+
+            R = item.mapToScene(item.nodeRegion).boundingRect()
+
+            # change this to four lines if its jank...
+            # or one line preferrably
+            line1 = QLineF(R.topLeft(), R.bottomRight())
+            line2 = QLineF(R.topRight(), R.bottomLeft())
+
+            # WARNING, looks lkie intersect api is different for different types of QT...
+            a = line1.intersect(self.line(), QPointF(0, 0))
+            b = line2.intersect(self.line(), QPointF(0, 0))
+            #print('point1', a)
+            #print('point1', b)
+
+            # https://doc.qt.io/qt-5/qlinef-obsolete.html#IntersectType-enum
+            if a == 1 or b == 1:
+                #print('collision!!!')
+                selectednodes.append(node)
+                self.scene().view.highlight_node(node)
+            else:
+                self.scene().view.unhighlight_node(node)
+
+            #R.adjust(-60, -60, 60, 60)
+            
+
+        #selectednodes = [i.node for i in self.scene().selectedItems()]
+
         print('selectednodes', selectednodes)
         return selectednodes
 
@@ -776,9 +798,9 @@ class _TreeView(QGraphicsView):
         item = self.scene().n2i[n]
         hl = QGraphicsRectItem(item.content)
         if fullRegion:
-            hl.setLine(item.fullRegion)
+            hl.setRect(item.fullRegion)
         else:
-            hl.setLine(item.nodeRegion)
+            hl.setRect(item.nodeRegion)
         hl.setPen(QColor(fg))
         hl.setBrush(QColor(bg))
         hl.setOpacity(0.2)
