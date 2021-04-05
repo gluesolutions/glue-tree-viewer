@@ -12,7 +12,7 @@ from ete3.treeview.qt4_render import (
     get_tree_img_map,
     init_tree_style,
 )
-from ete3.treeview.qt4_gui import _TreeView
+from qt4_gui_modified import _TreeView
 
 import ete3
 
@@ -171,6 +171,7 @@ class TreeDataViewer(DataViewer):
         self.data = data
         t = self.data.get_ete_tree()
 
+
         # do qt stuff {
 
         # show_tree stuff {
@@ -196,6 +197,14 @@ class TreeDataViewer(DataViewer):
 
         # }
 
+        # get the x/y positions of tree segments {
+        # maybe call init_node_dimensions (qt4_render.py:1031)
+        # or assume its already called
+        # {lets just scrap this and modify their actual gui class}
+        # but we might give up, then try to use their init_node_dimensions values anyway
+        
+        # }
+
 
         # QUESTION: should we use show_tree code drawer.py:73,
                         # {POSA}. we are already doing this and it almost works
@@ -218,3 +227,9 @@ qt_client.add(TreeDataViewer)
 # BUG: we can't save the session
 # FEATURE: one of the sliders controlls which cutoff the dendrogram code uses?
 #     (wont work for general tree class, just dendrograms...)
+
+# TODO:
+#  * get all x1/x2/y1/y2 positions of the lines from ETE3
+#  * get xy positions of mouse
+
+# maybe 
