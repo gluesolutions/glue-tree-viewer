@@ -66,6 +66,8 @@ class _SelectorItem(QGraphicsLineItem):
         self.Color = QColor("blue")
         self._active = False
         QGraphicsLineItem.__init__(self, 0, 0, 0, 0)
+        self.selected_cache = set()
+
         if parent:
             self.setParentItem(parent)
 
@@ -75,6 +77,13 @@ class _SelectorItem(QGraphicsLineItem):
         #p.drawRect(self.rect().x(),self.rect().y(),self.rect().width(),self.rect().height())
         p.drawLine(self.line())
         self.get_selected_nodes()
+
+    def accumulate_selected(self):
+        self.selected_cache += self.get_selected_nodes()
+
+    def clear_cache(self):
+        del self.selected_cache
+        self.selected_cache = []
 
     def get_selected_nodes(self):
         #print('-- getting selected nodes')
@@ -101,20 +110,24 @@ class _SelectorItem(QGraphicsLineItem):
             #print('point1', b)
 
             # https://doc.qt.io/qt-5/qlinef-obsolete.html#IntersectType-enum
+
+            self.scene().view.unhighlight_node(node)
             if a == 1 or b == 1:
                 #print('collision!!!')
                 selectednodes.append(node)
-                self.scene().view.highlight_node(node)
-            else:
-                self.scene().view.unhighlight_node(node)
+                #self.scene().view.highlight_node(node)
+            #else:
+                #self.scene().view.unhighlight_node(node)
 
             #R.adjust(-60, -60, 60, 60)
             
 
         #selectednodes = [i.node for i in self.scene().selectedItems()]
+        for node in selectednodes + self.selected_cache:
+            self.scene().view.highlight_node(node)
 
         print('selectednodes', selectednodes)
-        return selectednodes
+        return selectednodes + self.selected_cache
 
     def setActive(self,bool):
         self._active = bool
@@ -768,6 +781,7 @@ class _TreeView(QGraphicsView):
         #self.buffer_node = None
         self.focus_node = None
         self.selector = _SelectorItem(master_item)
+        self.andSelect = False
 
     def resizeEvent(self, e):
         QGraphicsView.resizeEvent(self, e)
@@ -876,10 +890,20 @@ class _TreeView(QGraphicsView):
         return
         #self.focus_highlight.setVisible(False)
 
+    def keyReleaseEvent(self, e):
+        if e.key() == Qt.Key_Shift:
+            self.andSelect = False
+
+        QGraphicsView.keyReleaseEvent(self,e)
+
     def keyPressEvent(self,e):
         key = e.key()
         control = e.modifiers() & Qt.ControlModifier
-        if control:
+        shift = e.modifiers() & Qt.ShiftModifier
+        if shift:
+            print(shift)
+            self.andSelect = True
+        elif control:
             if key  == Qt.Key_Left:
                 self.horizontalScrollBar().setValue(self.horizontalScrollBar().value()-20 )
                 self.update()
@@ -949,6 +973,10 @@ class _TreeView(QGraphicsView):
     def mousePressEvent(self,e):
         pos = self.mapToScene(e.pos())
         x, y = pos.x(), pos.y()
+        if self.andSelect:
+            self.selector.accumulate_selected()
+        else:
+            self.selector.clear_cache()
         self.selector.setLine(x, y, x, y)
         self.selector.startPoint = QPointF(x, y)
         self.selector.setActive(True)

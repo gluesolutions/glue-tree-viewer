@@ -24,7 +24,9 @@ class TreeData(BaseCartesianData):
 
     @property
     def shape(self):
-        return (42,)
+        # shape of a single component, given as a string.
+        # in our model, a "component" is as single node in the tree.
+        return (1,)
 
     @property
     def main_components(self):
@@ -37,7 +39,7 @@ class TreeData(BaseCartesianData):
         #        , 'tree' = ete3.Tree ??
 
         # http://etetoolkit.org/docs/latest/tutorial/tutorial_trees.html#reading-newick-trees
-        return "tree"
+        return "categorical"
 
     def get_data(self, cid, view=None):
         # note: view is a slice of a numpy array. does not really apply to tree data
@@ -95,4 +97,5 @@ def is_newick(fname, **kwargs):
 
 @data_factory("Newick tree loader", is_newick)
 def read_newick(fname):
-    return TreeData(fname, format=3)
+    # TODO how to give user option to choose format?
+    return TreeData(fname)
