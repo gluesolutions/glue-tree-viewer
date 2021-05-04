@@ -32,14 +32,51 @@ class TreeLayerArtist(LayerArtist):
 
     _layer_state_cls = TreeLayerState
 
-    def __init__(self, axes, *args, **kwargs):
-        print("args", args)
-        print("kwargs", kwargs)
-        # del kwargs['layer_state'] # BUG
-        print("thingsi have", self.__dir__)
+    def init_treedrawing(self, data):
+        self.data = data
+        t = self.data.tdata
+
+
+        # do qt stuff {
+
+        # show_tree stuff {
+
+        scene, ts = _TreeScene(), ete3.TreeStyle()
+        self.scene = scene
+
+        tree_item, n2i, n2f = render(t, ts)
+        scene.init_values(t, ts, n2i, n2f)
+
+        tree_item.setParentItem(scene.master_item)
+        scene.addItem(scene.master_item)
+
+        # }
+
+        # _GUI class stuff {
+
+        self.scene.GUI = self
+        self.view = _TreeView(self.scene)
+        self.scene.view = self.view
+        self.node_properties = None
+        self.view.prop_table = None
+
+        # }
+
+
+        import pdb;
+        pdb.set_trace()
+        self.setCentralWidget(self.view)
+
+        self.redraw()
+
+        return True
+
+    def __init__(self, fn, *args, **kwargs):
         super(TreeLayerArtist, self).__init__(*args, **kwargs)
+        self.setCentralWidget = fn
 
         self.state.add_callback('fill', self._on_fill_checked)
+        self.init_treedrawing(self.state.layer.data)
 
     def clear(self):
         print("clear1")
@@ -48,7 +85,10 @@ class TreeLayerArtist(LayerArtist):
         print("remove1")
 
     def redraw(self):
-        print("redraw1")
+        #import pdb;
+        #pdb.set_trace()
+        self.scene.draw()
+        self.view.init_values()
 
     def update(self):
         print("update1")
@@ -97,8 +137,6 @@ class TreeDataViewer(DataViewer):
     def __init__(self, session, state=None, parent=None, widget=None):
         super(TreeDataViewer, self).__init__(session, state=state, parent=parent)
 
-        self.tdata = None
-
         assert isinstance(self.state, ViewerState)
         self.state.add_callback('layers', self._on_layers_changed)
         self._on_layers_changed()
@@ -111,62 +149,10 @@ class TreeDataViewer(DataViewer):
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         # QUESTION: also, where does self.state come from? guess: from superclass, Viewer, and is an instantiation of TreeViewerState
-        return cls(self.axes, self.state, layer=layer, layer_state=layer_state)
+        return cls(self.setCentralWidget, self.state, layer=layer, layer_state=layer_state)
     
-    def _redraw(self):
-        import pdb;
-        pdb.set_trace()
-        self.scene.draw()
-        self.view.init_values()
 
-    def add_data(self, data):
-        self.data = data
-        t = self.data.tdata
-
-
-        # do qt stuff {
-
-        # show_tree stuff {
-
-        scene, ts = _TreeScene(), ete3.TreeStyle()
-        self.scene = scene
-
-        tree_item, n2i, n2f = render(t, ts)
-        scene.init_values(t, ts, n2i, n2f)
-
-        tree_item.setParentItem(scene.master_item)
-        scene.addItem(scene.master_item)
-
-        # }
-
-        # _GUI class stuff {
-
-        self.scene.GUI = self
-        self.view = _TreeView(self.scene)
-        self.scene.view = self.view
-        self.node_properties = None
-        self.view.prop_table = None
-
-        # }
-
-        # get the x/y positions of tree segments {
-        # maybe call init_node_dimensions (qt4_render.py:1031)
-        # or assume its already called
-        # {lets just scrap this and modify their actual gui class}
-        # but we might give up, then try to use their init_node_dimensions values anyway
-        
-        # }
-
-
-        # QUESTION: should we use show_tree code drawer.py:73,
-                        # {POSA}. we are already doing this and it almost works
-        #        or should we use gui class qt4_gui:133
-
-        self.setCentralWidget(self.view)
-
-        self._redraw()
-
-        return True
+    
 
 
 from glue.config import qt_client
