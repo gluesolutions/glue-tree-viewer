@@ -13,6 +13,7 @@ from glue.config import data_factory, link_function
 
 @link_function(info="Link from tree data object to an ID string column", output_labels=['string'])
 def node_to_string(node):
+    # node is a list := array(['JN024141', 'JN024527', '0.420', ..., '0.000', '0.000', ''],dtype='<U8')
     return node.name
     
 
@@ -23,7 +24,7 @@ def node_to_string(node):
 def tree_process(fname):
     result = Data()
     result.label = 'tree data'
-    tree = ete3.Tree(fname)
+    tree = ete3.Tree(fname,format=1)
     result.tdata = tree
 
     nodes = np.array([n.name for n in tree.traverse("postorder")])
@@ -39,3 +40,5 @@ def tree_process(fname):
 def read_newick(fname):
     # TODO how to give user option to choose format?
     return tree_process(fname)
+
+# https://github.com/glue-viz/glue/blob/241edb32ab6f4a82adf02ef3711c16342fd214ed/glue/plugins/dendro_viewer/qt/data_viewer.py#L92

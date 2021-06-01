@@ -33,6 +33,7 @@ class TreeLayerArtist(LayerArtist):
     _layer_state_cls = TreeLayerState
 
     def init_treedrawing(self, data):
+        #TODO move I think this should be in dataviewer class
         self.data = data
         t = self.data.tdata
 
@@ -42,6 +43,10 @@ class TreeLayerArtist(LayerArtist):
         # show_tree stuff {
 
         scene, ts = _TreeScene(), ete3.TreeStyle()
+
+        
+        # set style of nodes appropirate to sublcasses
+
         self.scene = scene
 
         tree_item, n2i, n2f = render(t, ts)
@@ -55,7 +60,7 @@ class TreeLayerArtist(LayerArtist):
         # _GUI class stuff {
 
         self.scene.GUI = self
-        self.view = _TreeView(self.scene)
+        self.view = _TreeView(self.session, self.apply_subset_state, self.scene)
         self.scene.view = self.view
         self.node_properties = None
         self.view.prop_table = None
@@ -63,17 +68,19 @@ class TreeLayerArtist(LayerArtist):
         # }
 
 
-        import pdb;
-        pdb.set_trace()
         self.setCentralWidget(self.view)
 
         self.redraw()
 
         return True
 
-    def __init__(self, fn, *args, **kwargs):
+    def __init__(self, fn, session, apply_subset_state, parent, *args, **kwargs):
+        self.treeviewer = parent
         super(TreeLayerArtist, self).__init__(*args, **kwargs)
+        print('tree layer artist being initialzied')
         self.setCentralWidget = fn
+        self.session = session
+        self.apply_subset_state = apply_subset_state
 
         self.state.add_callback('fill', self._on_fill_checked)
         self.init_treedrawing(self.state.layer.data)
@@ -85,8 +92,6 @@ class TreeLayerArtist(LayerArtist):
         print("remove1")
 
     def redraw(self):
-        #import pdb;
-        #pdb.set_trace()
         self.scene.draw()
         self.view.init_values()
 
@@ -115,6 +120,7 @@ from qtpy.QtWidgets import (
 # -- FINAL: DATA VIEWER CLASS
 from glue.viewers.common.qt.data_viewer import DataViewer
 from matplotlib import pyplot as plt
+from glue.core.subset import Subset
 
 
 class TreeViewerState(ViewerState):
@@ -136,20 +142,60 @@ class TreeDataViewer(DataViewer):
 
     def __init__(self, session, state=None, parent=None, widget=None):
         super(TreeDataViewer, self).__init__(session, state=state, parent=parent)
+        self.s = session
 
         assert isinstance(self.state, ViewerState)
         self.state.add_callback('layers', self._on_layers_changed)
-        self._on_layers_changed()
+        from collections import defaultdict
+        self.title2color = defaultdict((lambda: "#000000"))
+
+    def add_data(self, data):
+        print('adding data')
+        return super(TreeDataViewer, self).add_data(data)
+
+    #def add_subset(self, subset):
+        #print('adding subset')
+        ##if subset.data != self.data:
+            ##raise ValueError("subset parent data does not match existing tree data")
+        #return super(TreeDataViewer, self).add_subset(subset)
 
     def _on_layers_changed(self, *args):
-        for layerstate in self.state.layers:
+        for layerstate in self.layers:
             print('layerstate', layerstate)
+            if layerstate.visible:
+                layer = layerstate.layer
+                if isinstance(layer, Subset):
+                    import pdb
+                    pdb.set_trace()
+                    print('subset_mask')
+                    print(layer.to_mask())
+                    print('longlen', len(layer.data['tree nodes']))
+                    print('shortlen', len(layer.data['tree nodes'][layer.to_mask()]))
+                    goodnames = layer.data['tree nodes'][layer.to_mask()]
+                    for name in goodnames:
+                        self.title2color[name] = layer.style.color
+                    #{ make code to tree node conversion }
+                    print('found subset')
+
+                    for node in layer.data.tdata.traverse():
+                        print('node.title', node.name)
+                        st = ete3.NodeStyle()
+                        color = self.title2color[node.name]
+                        if color != "#000000":
+                            print('found !!!', color)
+                            st["bgcolor"] = color
+                            node.set_style(st)
+                else:
+                    assert hasattr(layer, 'tdata')
+                
 
         print('layers chagned')
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         # QUESTION: also, where does self.state come from? guess: from superclass, Viewer, and is an instantiation of TreeViewerState
-        return cls(self.setCentralWidget, self.state, layer=layer, layer_state=layer_state)
+        assert cls == TreeLayerArtist
+        return cls(self.setCentralWidget, self.s, 
+                   self.apply_subset_state, self, self.state, layer=layer, layer_state=layer_state)
     
 
     
@@ -160,8 +206,14 @@ from glue.config import qt_client
 qt_client.add(TreeDataViewer)
 
 # BUG: we can't save the session
-# FEATURE: one of the sliders controlls which cutoff the dendrogram code uses?
-#     (wont work for general tree class, just dendrograms...)
 
 # how to send links from tree viewer
-# https://github.com/glue-viz/glue/blob/241edb32ab6f4a82adf02ef3711c16342fd214ed/glue/viewers/table/qt/data_viewer.py#L251
+
+# PERFORMANCE:  only do collision checks when the selection line changes, not every frame.
+
+# TODO
+# press enter to submit subset
+   # https://github.com/glue-viz/glue/blob/241edb32ab6f4a82adf02ef3711c16342fd214ed/glue/viewers/table/qt/data_viewer.py#L251
+# display subsets on tree
+
+# TODO use https://github.com/glue-viz/glue/blob/241edb32ab6f4a82adf02ef3711c16342fd214ed/glue/utils/array.py#L497 this class to represent trees?
