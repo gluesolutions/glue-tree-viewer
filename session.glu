@@ -1,0 +1,578 @@
+{
+  "CallbackList": {
+    "_type": "echo.containers.CallbackList",
+    "values": [
+      "ScatterLayerState"
+    ]
+  },
+  "CallbackList_0": {
+    "_type": "echo.containers.CallbackList",
+    "values": [
+      "ScatterLayerState_0"
+    ]
+  },
+  "CategoricalComponent": {
+    "_type": "glue.core.component.CategoricalComponent",
+    "log": "LoadLog",
+    "log_item": 1
+  },
+  "CategoricalComponent_0": {
+    "_type": "glue.core.component.CategoricalComponent",
+    "log": "LoadLog_0",
+    "log_item": 1
+  },
+  "CategoricalComponent_1": {
+    "_type": "glue.core.component.CategoricalComponent",
+    "log": "LoadLog_0",
+    "log_item": 2
+  },
+  "CategoricalComponent_2": {
+    "_type": "glue.core.component.CategoricalComponent",
+    "log": "LoadLog_0",
+    "log_item": 4
+  },
+  "CategoricalComponent_3": {
+    "_type": "glue.core.component.CategoricalComponent",
+    "log": "LoadLog_0",
+    "log_item": 5
+  },
+  "CategoricalComponent_4": {
+    "_type": "glue.core.component.CategoricalComponent",
+    "log": "LoadLog_0",
+    "log_item": 6
+  },
+  "CategoricalComponent_5": {
+    "_type": "glue.core.component.CategoricalComponent",
+    "log": "LoadLog_0",
+    "log_item": 12
+  },
+  "Component": {
+    "_type": "glue.core.component.Component",
+    "log": "LoadLog_0",
+    "log_item": 3
+  },
+  "ComponentLink": {
+    "_type": "glue.core.component_link.ComponentLink",
+    "frm": [
+      "tree nodes"
+    ],
+    "inverse": {
+      "_type": "types.FunctionType",
+      "function": "glue.core.link_helpers.identity"
+    },
+    "to": [
+      "ID Key"
+    ],
+    "using": {
+      "_type": "types.FunctionType",
+      "function": "glue.core.link_helpers.identity"
+    }
+  },
+  "Component_0": {
+    "_type": "glue.core.component.Component",
+    "log": "LoadLog_0",
+    "log_item": 7
+  },
+  "Component_1": {
+    "_type": "glue.core.component.Component",
+    "log": "LoadLog_0",
+    "log_item": 8
+  },
+  "Component_2": {
+    "_type": "glue.core.component.Component",
+    "log": "LoadLog_0",
+    "log_item": 9
+  },
+  "Component_3": {
+    "_type": "glue.core.component.Component",
+    "log": "LoadLog_0",
+    "log_item": 10
+  },
+  "Component_4": {
+    "_type": "glue.core.component.Component",
+    "log": "LoadLog_0",
+    "log_item": 11
+  },
+  "CoordinateComponent": {
+    "_type": "glue.core.component.CoordinateComponent",
+    "axis": 0,
+    "world": false
+  },
+  "CoordinateComponent_0": {
+    "_type": "glue.core.component.CoordinateComponent",
+    "axis": 0,
+    "world": false
+  },
+  "Country": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "Country"
+  },
+  "DataCollection": {
+    "_protocol": 4,
+    "_type": "glue.core.data_collection.DataCollection",
+    "cids": [
+      "Pixel Axis 0 [x]",
+      "tree nodes",
+      "Pixel Axis 0 [x]_0",
+      "ID Key",
+      "Patient Code",
+      "PAT id(SSAM)",
+      "Name",
+      "Subtype",
+      "Country",
+      "Sampling Year",
+      "Sampling Year Upper",
+      "HXB2/MAC239 start",
+      "HXB2/MAC239 stop",
+      "Sequence Length",
+      "Organism"
+    ],
+    "components": [
+      "CoordinateComponent",
+      "CategoricalComponent",
+      "CoordinateComponent_0",
+      "CategoricalComponent_0",
+      "CategoricalComponent_1",
+      "Component",
+      "CategoricalComponent_2",
+      "CategoricalComponent_3",
+      "CategoricalComponent_4",
+      "Component_0",
+      "Component_1",
+      "Component_2",
+      "Component_3",
+      "Component_4",
+      "CategoricalComponent_5"
+    ],
+    "data": [
+      "tree data",
+      "data"
+    ],
+    "groups": [],
+    "links": [
+      "ComponentLink"
+    ],
+    "subset_group_count": 1
+  },
+  "HXB2/MAC239 start": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "HXB2/MAC239 start"
+  },
+  "HXB2/MAC239 stop": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "HXB2/MAC239 stop"
+  },
+  "ID Key": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "ID Key"
+  },
+  "LinearSegmentedColormap": {
+    "_type": "matplotlib.colors.LinearSegmentedColormap",
+    "cmap": "gray"
+  },
+  "LoadLog": {
+    "_protocol": 2,
+    "_type": "glue.core.data_factories.helpers.LoadLog",
+    "factory": {
+      "_type": "types.FunctionType",
+      "function": "config.read_newick"
+    },
+    "force_coords": false,
+    "kwargs": [
+      []
+    ],
+    "path": "linking/data.tre"
+  },
+  "LoadLog_0": {
+    "_protocol": 2,
+    "_type": "glue.core.data_factories.helpers.LoadLog",
+    "factory": {
+      "_type": "types.FunctionType",
+      "function": "glue.core.data_factories.helpers.auto_data"
+    },
+    "force_coords": false,
+    "kwargs": [
+      []
+    ],
+    "path": "linking/data.csv"
+  },
+  "Name": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "Name"
+  },
+  "Organism": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "Organism"
+  },
+  "PAT id(SSAM)": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "PAT id(SSAM)"
+  },
+  "Patient Code": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "Patient Code"
+  },
+  "Pixel Axis 0 [x]": {
+    "_type": "glue.core.component_id.PixelComponentID",
+    "axis": 0,
+    "label": "Pixel Axis 0 [x]"
+  },
+  "Pixel Axis 0 [x]_0": {
+    "_type": "glue.core.component_id.PixelComponentID",
+    "axis": 0,
+    "label": "Pixel Axis 0 [x]"
+  },
+  "Sampling Year": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "Sampling Year"
+  },
+  "Sampling Year Upper": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "Sampling Year Upper"
+  },
+  "ScatterLayerState": {
+    "_type": "glue.viewers.scatter.state.ScatterLayerState",
+    "values": {
+      "alpha": 0.8,
+      "cmap": "LinearSegmentedColormap",
+      "cmap_att": null,
+      "cmap_mode": "st__Fixed",
+      "cmap_vmax": null,
+      "cmap_vmin": null,
+      "color": "st__#595959",
+      "density_contrast": 1.0,
+      "density_map": false,
+      "fill": true,
+      "layer": "tree data",
+      "line_visible": false,
+      "linestyle": "st__solid",
+      "linewidth": 1,
+      "markers_visible": true,
+      "points_mode": "st__auto",
+      "size": 3,
+      "size_att": null,
+      "size_mode": "st__Fixed",
+      "size_scaling": 1,
+      "size_vmax": null,
+      "size_vmin": null,
+      "stretch": "st__log",
+      "vector_arrowhead": false,
+      "vector_mode": "st__Cartesian",
+      "vector_origin": "st__middle",
+      "vector_scaling": 0.9770099572992254,
+      "vector_visible": false,
+      "visible": true,
+      "vx_att": null,
+      "vy_att": null,
+      "xerr_att": null,
+      "xerr_visible": false,
+      "yerr_att": null,
+      "yerr_visible": false,
+      "zorder": 1
+    }
+  },
+  "ScatterLayerState_0": {
+    "_type": "glue.viewers.scatter.state.ScatterLayerState",
+    "values": {
+      "alpha": 0.8,
+      "cmap": "LinearSegmentedColormap",
+      "cmap_att": "PAT id(SSAM)",
+      "cmap_mode": "st__Fixed",
+      "cmap_vmax": 78184,
+      "cmap_vmin": -1,
+      "color": "st__#595959",
+      "density_contrast": 1.0,
+      "density_map": false,
+      "fill": true,
+      "layer": "data",
+      "line_visible": false,
+      "linestyle": "st__solid",
+      "linewidth": 1,
+      "markers_visible": true,
+      "points_mode": "st__auto",
+      "size": 3,
+      "size_att": "PAT id(SSAM)",
+      "size_mode": "st__Fixed",
+      "size_scaling": 1,
+      "size_vmax": 78184,
+      "size_vmin": -1,
+      "stretch": "st__log",
+      "vector_arrowhead": false,
+      "vector_mode": "st__Cartesian",
+      "vector_origin": "st__middle",
+      "vector_scaling": 0.9770099572992254,
+      "vector_visible": false,
+      "visible": true,
+      "vx_att": "PAT id(SSAM)",
+      "vy_att": "PAT id(SSAM)",
+      "xerr_att": "PAT id(SSAM)",
+      "xerr_visible": false,
+      "yerr_att": "PAT id(SSAM)",
+      "yerr_visible": false,
+      "zorder": 1
+    }
+  },
+  "ScatterViewer": {
+    "_protocol": 1,
+    "_type": "glue.viewers.scatter.qt.data_viewer.ScatterViewer",
+    "layers": [
+      {
+        "_type": "glue.viewers.scatter.layer_artist.ScatterLayerArtist",
+        "state": "ScatterLayerState"
+      }
+    ],
+    "pos": [
+      0,
+      0
+    ],
+    "session": "Session",
+    "size": [
+      600,
+      400
+    ],
+    "state": {
+      "values": {
+        "aspect": "st__auto",
+        "dpi": 71.30820648960312,
+        "layers": "CallbackList",
+        "plot_mode": "st__rectilinear",
+        "show_axes": true,
+        "x_att": "tree nodes",
+        "x_axislabel": "st__tree nodes",
+        "x_axislabel_size": 10,
+        "x_axislabel_weight": "st__normal",
+        "x_log": false,
+        "x_max": 1268.3,
+        "x_min": -49.300000000000004,
+        "x_ticklabel_size": 8,
+        "y_att": "Pixel Axis 0 [x]",
+        "y_axislabel": "st__Pixel Axis 0 [x]",
+        "y_axislabel_size": 10,
+        "y_axislabel_weight": "st__normal",
+        "y_log": false,
+        "y_max": 1726.5,
+        "y_min": -0.5,
+        "y_ticklabel_size": 8
+      }
+    }
+  },
+  "ScatterViewer_0": {
+    "_protocol": 1,
+    "_type": "glue.viewers.scatter.qt.data_viewer.ScatterViewer",
+    "layers": [
+      {
+        "_type": "glue.viewers.scatter.layer_artist.ScatterLayerArtist",
+        "state": "ScatterLayerState_0"
+      }
+    ],
+    "pos": [
+      600,
+      0
+    ],
+    "session": "Session",
+    "size": [
+      600,
+      400
+    ],
+    "state": {
+      "values": {
+        "aspect": "st__auto",
+        "dpi": 71.30820648960312,
+        "layers": "CallbackList_0",
+        "plot_mode": "st__rectilinear",
+        "show_axes": true,
+        "x_att": "ID Key",
+        "x_axislabel": "st__ID Key",
+        "x_axislabel_size": 10,
+        "x_axislabel_weight": "st__normal",
+        "x_log": false,
+        "x_max": 902.22,
+        "x_min": -35.22,
+        "x_ticklabel_size": 8,
+        "y_att": "Patient Code",
+        "y_axislabel": "st__Patient Code",
+        "y_axislabel_size": 10,
+        "y_axislabel_weight": "st__normal",
+        "y_log": false,
+        "y_max": 217.9,
+        "y_min": -8.9,
+        "y_ticklabel_size": 8
+      }
+    }
+  },
+  "Sequence Length": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "Sequence Length"
+  },
+  "Session": {
+    "_type": "glue.core.session.Session"
+  },
+  "Subtype": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "Subtype"
+  },
+  "__main__": {
+    "_type": "glue.app.qt.application.GlueApplication",
+    "data": "DataCollection",
+    "plugins": [
+      "glue.io.qt.directory_importer",
+      "glue.plugins.export_d3po",
+      "glue.viewers.histogram.qt",
+      "glue.viewers.image.qt",
+      "glue.plugins.wcs_autolinking",
+      "glue.plugins.dendro_viewer.qt",
+      "glue.core.data_exporters",
+      "glue.io.formats.fits",
+      "glue_vispy_viewers.volume",
+      "glue.plugins.coordinate_helpers",
+      "glue.plugins.dendro_viewer",
+      "glue.plugins.tools",
+      "glue.plugins.tools.pv_slicer.qt",
+      "glue.viewers.table.qt",
+      "glue.viewers.profile.qt",
+      "glue.viewers.scatter.qt",
+      "glue_vispy_viewers.scatter"
+    ],
+    "session": "Session",
+    "tab_names": [
+      "Tab 1"
+    ],
+    "viewers": [
+      [
+        "ScatterViewer",
+        "ScatterViewer_0"
+      ]
+    ]
+  },
+  "data": {
+    "_key_joins": [],
+    "_protocol": 5,
+    "_type": "glue.core.data.Data",
+    "components": [
+      [
+        "Pixel Axis 0 [x]_0",
+        "CoordinateComponent_0"
+      ],
+      [
+        "ID Key",
+        "CategoricalComponent_0"
+      ],
+      [
+        "Patient Code",
+        "CategoricalComponent_1"
+      ],
+      [
+        "PAT id(SSAM)",
+        "Component"
+      ],
+      [
+        "Name",
+        "CategoricalComponent_2"
+      ],
+      [
+        "Subtype",
+        "CategoricalComponent_3"
+      ],
+      [
+        "Country",
+        "CategoricalComponent_4"
+      ],
+      [
+        "Sampling Year",
+        "Component_0"
+      ],
+      [
+        "Sampling Year Upper",
+        "Component_1"
+      ],
+      [
+        "HXB2/MAC239 start",
+        "Component_2"
+      ],
+      [
+        "HXB2/MAC239 stop",
+        "Component_3"
+      ],
+      [
+        "Sequence Length",
+        "Component_4"
+      ],
+      [
+        "Organism",
+        "CategoricalComponent_5"
+      ]
+    ],
+    "label": "data",
+    "meta": {
+      "_type": "collections.OrderedDict",
+      "contents": {}
+    },
+    "primary_owner": [
+      "Pixel Axis 0 [x]_0",
+      "ID Key",
+      "Patient Code",
+      "PAT id(SSAM)",
+      "Name",
+      "Subtype",
+      "Country",
+      "Sampling Year",
+      "Sampling Year Upper",
+      "HXB2/MAC239 start",
+      "HXB2/MAC239 stop",
+      "Sequence Length",
+      "Organism"
+    ],
+    "style": {
+      "_type": "glue.core.visual.VisualAttributes",
+      "alpha": 0.8,
+      "color": "#595959",
+      "linestyle": "solid",
+      "linewidth": 1,
+      "marker": "o",
+      "markersize": 3,
+      "preferred_cmap": null
+    },
+    "subsets": [],
+    "uuid": "4d63b08e-2506-499a-9d7c-73ac74f3a466"
+  },
+  "tree data": {
+    "_key_joins": [],
+    "_protocol": 5,
+    "_type": "glue.core.data.Data",
+    "components": [
+      [
+        "Pixel Axis 0 [x]",
+        "CoordinateComponent"
+      ],
+      [
+        "tree nodes",
+        "CategoricalComponent"
+      ]
+    ],
+    "label": "tree data",
+    "meta": {
+      "_type": "collections.OrderedDict",
+      "contents": {}
+    },
+    "primary_owner": [
+      "Pixel Axis 0 [x]",
+      "tree nodes"
+    ],
+    "style": {
+      "_type": "glue.core.visual.VisualAttributes",
+      "alpha": 0.8,
+      "color": "#595959",
+      "linestyle": "solid",
+      "linewidth": 1,
+      "marker": "o",
+      "markersize": 3,
+      "preferred_cmap": null
+    },
+    "subsets": [],
+    "uuid": "4fb4cba4-11e2-4b16-a144-6137a1a10bf6"
+  },
+  "tree nodes": {
+    "_type": "glue.core.component_id.ComponentID",
+    "label": "tree nodes"
+  }
+}
