@@ -6,6 +6,7 @@ from glue.viewers.common.state import ViewerState
 from glue.external.echo import CallbackProperty
 from glue.core.data_combo_helper import ComponentIDComboHelper
 from glue.config import viewer_tool
+from glue.viewers.common.tool import CheckableTool, Tool
 
 
 from ete3.treeview.qt4_render import (
@@ -125,6 +126,7 @@ class TreeViewerStateWidget(QWidget):
         self.viewer_state = viewer_state
         self._connections = autoconnect_callbacks_to_qt(self.viewer_state, self.ui)
 
+from glue.viewers.common.qt.toolbar import BasicToolbar
 
 class TreeDataViewer(DataViewer):
     LABEL = "ete3 based Tree Viewer"
@@ -134,7 +136,8 @@ class TreeDataViewer(DataViewer):
     _data_artist_cls = TreeLayerArtist
     _subset_artist_cls = TreeLayerArtist
 
-    # tools = ['table:rowselect']
+    _toolbar_cls = BasicToolbar
+    tools = ['tree:home', 'tree:rectzoom']
 
     # additional stuff for qt
 
@@ -288,6 +291,62 @@ class TreeDataViewer(DataViewer):
         self.scene.draw()
         self.view.init_values()
 
+    def zoomOut(self):
+        from qtpy import QtCore
+        from qtpy.QtCore import Qt
+       # from https://github.com/etetoolkit/ete/blob/1f587a315f3c61140e3bdbe697e3e86eda6d2eca/ete3/treeview/qt4_gui.py#L231
+        self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
+
+    def zoomHome(self):
+        from qtpy import QtCore
+        from qtpy.QtCore import Qt
+       # from https://github.com/etetoolkit/ete/blob/1f587a315f3c61140e3bdbe697e3e86eda6d2eca/ete3/treeview/qt4_gui.py#L231
+        self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
+
+@viewer_tool
+class HomeButton(Tool):
+
+    icon = 'glue_home'
+    tool_id = 'tree:home'
+    action_text = 'Navigates camera to look at root node'
+    tool_tip = 'View tree root'
+    shortcut = 'H'
+
+    def __init__(self, viewer):
+        super(HomeButton, self).__init__(viewer)
+
+    def activate(self):
+        self.viewer.zoomHome()
+
+    def close(self):
+        pass
+
+DEFUALT_MOUSE_MODE = "none"
+
+@viewer_tool
+class ZoomOut(CheckableTool):
+
+    icon = 'glue_zoom_to_rect'
+    tool_id = 'tree:rectzoom'
+    action_text = 'Zooms camera to rect selection'
+    tool_tip = 'View tree root'
+    shortcut = 'Z'
+
+    def __init__(self, viewer):
+        super(ZoomOut, self).__init__(viewer)
+
+    def activate(self):
+        self.viewer.view.mouseMode = "rectzoom"
+    def deactivate(self):
+        self.viewer.view.zoomrect.inMotion = False
+        self.viewer.view.zoomrect.setActive(False)
+        self.viewer.view.zoomrect.setVisible(False)
+
+        self.viewer.view.mouseMode = DEFUALT_MOUSE_MODE
+
+    def close(self):
+        pass
+
 
 from glue.config import qt_client
 
@@ -315,3 +374,5 @@ qt_client.add(TreeDataViewer)
 
 # TODO make it listen to hub messages nicely
 # TODO click AND drag options
+
+# BUG sometimes it gets completely red and wont delete, even after I close it(i think its a static variable being changed, probably a root node getting selected)

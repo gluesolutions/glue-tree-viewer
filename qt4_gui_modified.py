@@ -65,6 +65,21 @@ from glue.core.subset import CategorySubsetState
 import time
 
 
+class _ZoomboxItem(QGraphicsRectItem):
+    def __init__(self, parent=None):
+        QGraphicsRectItem.__init__(self, 0, 0, 0, 0)
+        self.Color = QColor("blue")
+        self._active = False
+        self.inMotion = False
+
+        if parent:
+            self.setParentItem(parent)
+
+    def paint(self, p, option, widget):
+        p.setPen(self.Color)
+        p.setBrush(QBrush(Qt.NoBrush))
+        p.drawRect(self.rect().x(),self.rect().y(),self.rect().width(),self.rect().height())
+
 class _SelectorItem(QGraphicsLineItem):
     def __init__(self, parent=None):
         self.Color = QColor("blue")
@@ -181,6 +196,8 @@ class _TreeView(QGraphicsView):
         # self.scene().setItemIndexMethod(QGraphicsScene.NoIndex)
         # self.scene().setBspTreeDepth(24)
 
+        self.mouseMode = "none"
+
     def init_values(self):
         master_item = self.scene().master_item
         self.n2hl = {}
@@ -188,6 +205,7 @@ class _TreeView(QGraphicsView):
         # self.buffer_node = None
         self.focus_node = None
         self.selector = _SelectorItem(master_item)
+        self.zoomrect = _ZoomboxItem(master_item)
         self.andSelect = False
 
     def resizeEvent(self, e):
@@ -392,42 +410,71 @@ class _TreeView(QGraphicsView):
         QGraphicsView.keyPressEvent(self, e)
 
     def mouseReleaseEvent(self, e):
-        self.scene().view.hide_focus()
-        curr_pos = self.mapToScene(e.pos())
-        if hasattr(self.selector, "startPoint"):
-            x = min(self.selector.startPoint.x(), curr_pos.x())
-            y = min(self.selector.startPoint.y(), curr_pos.y())
-            w = max(self.selector.startPoint.x(), curr_pos.x()) - x
-            h = max(self.selector.startPoint.y(), curr_pos.y()) - y
-            if self.selector.startPoint == curr_pos:
-                self.selector.setVisible(False)
-            self.selector.setActive(False)
+        if self.mouseMode == "lineselect":
+            self.scene().view.hide_focus()
+            curr_pos = self.mapToScene(e.pos())
+            if hasattr(self.selector, "startPoint"):
+                x = min(self.selector.startPoint.x(), curr_pos.x())
+                y = min(self.selector.startPoint.y(), curr_pos.y())
+                w = max(self.selector.startPoint.x(), curr_pos.x()) - x
+                h = max(self.selector.startPoint.y(), curr_pos.y()) - y
+                if self.selector.startPoint == curr_pos:
+                    self.selector.setVisible(False)
+                    self.selector.setActive(False)
         QGraphicsView.mouseReleaseEvent(self, e)
 
     def mousePressEvent(self, e):
-        pos = self.mapToScene(e.pos())
-        x, y = pos.x(), pos.y()
-        if self.andSelect:
-            self.selector.accumulate_selected()
-        else:
-            self.selector.clear_cache()
-        self.selector.setLine(x, y, x, y)
-        self.selector.startPoint = QPointF(x, y)
-        self.selector.setActive(True)
-        self.selector.setVisible(True)
+        if self.mouseMode == "lineselect":
+            pos = self.mapToScene(e.pos())
+            x, y = pos.x(), pos.y()
+            if self.andSelect:
+                self.selector.accumulate_selected()
+            else:
+                self.selector.clear_cache()
+                self.selector.setLine(x, y, 0, 0)
+                self.selector.startPoint = QPointF(x, y)
+                self.selector.setActive(True)
+                self.selector.setVisible(True)
+
+        elif self.mouseMode == "rectzoom":
+            pos = self.mapToScene(e.pos())
+            x,y = pos.x(), pos.y()
+
+            if self.zoomrect.inMotion == False:
+                self.zoomrect.inMotion = True
+
+                self.zoomrect.setRect(x, y, 0, 0)
+                self.zoomrect.setActive(True)
+                self.zoomrect.setVisible(True)
+            else:
+                self.zoomrect.inMotion = False
+
+                # convert rect to have positive coordinates
+                self.fitInView(self.zoomrect.rect().normalized(), Qt.KeepAspectRatio)
+
+                self.zoomrect.setActive(False)
+                self.zoomrect.setVisible(False)
+                
+                
+
         QGraphicsView.mousePressEvent(self, e)
 
     def mouseMoveEvent(self, e):
-        curr_pos = self.mapToScene(e.pos())
-        if self.selector.isActive():
-            start = self.selector.startPoint
-            self.selector.setLine(start.x(), start.y(), curr_pos.x(), curr_pos.y())
-            self.selector.get_nodes_under_line()
-            # x = min(x(),curr_pos.x())
-            # y = min(self.selector.startPoint.y(),curr_pos.y())
-            # w = max(self.selector.startPoint.x(),curr_pos.x()) - x
-            # h = max(self.selector.startPoint.y(),curr_pos.y()) - y
-            # self.selector.setLine(x,y,w,h)
+        if self.mouseMode == "lineselect":
+            curr_pos = self.mapToScene(e.pos())
+            if self.selector.isActive():
+                start = self.selector.startPoint
+                self.selector.setLine(start.x(), start.y(), curr_pos.x(), curr_pos.y())
+                self.selector.get_nodes_under_line()
+
+        elif self.mouseMode == "rectzoom":
+            if self.zoomrect.inMotion:
+                curr_pos = self.mapToScene(e.pos())
+                r = self.zoomrect.rect()
+                w = curr_pos.x() - r.x()
+                h = curr_pos.y() - r.y() 
+                self.zoomrect.setRect(r.x(), r.y(), w, h)
+
         QGraphicsView.mouseMoveEvent(self, e)
 
 

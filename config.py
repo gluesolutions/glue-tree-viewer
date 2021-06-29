@@ -25,7 +25,7 @@ def tree_process(fname):
 
     result = Data()
     result.label = "tree data"
-    tree = ete3.Tree(fname, format=1)
+    tree = ete3.Tree(fname, format=0)
     result.tdata = tree
 
     nodes = np.array([n.name for n in tree.traverse("postorder")])
