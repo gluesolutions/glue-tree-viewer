@@ -431,7 +431,7 @@ class _TreeView(QGraphicsView):
                 self.selector.accumulate_selected()
             else:
                 self.selector.clear_cache()
-                self.selector.setLine(x, y, 0, 0)
+                self.selector.setLine(x, y, x, y)
                 self.selector.startPoint = QPointF(x, y)
                 self.selector.setActive(True)
                 self.selector.setVisible(True)
@@ -487,14 +487,6 @@ class _BasicNodeActions(object):
         obj.setAcceptHoverEvents(True)
 
     @staticmethod
-    def hoverEnterEvent(obj, e):
-        print("HOLA")
-
-    @staticmethod
-    def hoverLeaveEvent(obj, e):
-        print("ADIOS")
-
-    @staticmethod
     def mousePressEvent(obj, e):
         print("Click")
 
@@ -508,8 +500,10 @@ class _BasicNodeActions(object):
 
     @staticmethod
     def hoverEnterEvent(self, e):
-        self.scene().view.highlight_node(self.node, fullRegion=True)
+        # self.scene().view.highlight_node(self.node, fullRegion=True)
+        pass
 
     @staticmethod
     def hoverLeaveEvent(self, e):
-        self.scene().view.unhighlight_node(self.node)
+        # self.scene().view.unhighlight_node(self.node)
+        pass

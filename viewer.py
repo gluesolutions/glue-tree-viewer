@@ -8,6 +8,7 @@ from glue.core.data_combo_helper import ComponentIDComboHelper
 from glue.config import viewer_tool
 from glue.viewers.common.tool import CheckableTool, Tool
 
+from collections import defaultdict
 
 from ete3.treeview.qt4_render import (
     _TreeScene,
@@ -23,6 +24,28 @@ import ete3
 from glue.viewers.common.state import LayerState
 
 from glue.viewers.common.layer_artist import LayerArtist
+
+import cProfile
+import pstats
+
+def full_equal(dfd1, dfd2):
+    if dfd1 == dfd2:
+        return True
+
+    allkeys = set(dfd1.keys()).union(set(dfd2.keys()))
+
+    return all(dfd1[k] == dfd2[k] for k in allkeys)
+
+a = defaultdict(int)
+b = defaultdict(int)
+
+a['key'] = 0
+
+assert(a != b)
+assert(full_equal(a,b))
+
+
+
 
 
 class TreeLayerState(LayerState):
@@ -45,17 +68,22 @@ class TreeLayerArtist(LayerArtist):
 
     def clear(self):
         print("clear1")
+        self.treeviewer.redraw()
 
     def remove(self):
         print("remove1")
+        self.treeviewer.redraw()
 
     def redraw(self):
-        pass
+        print('redraw1')
         # self.scene.draw()
         # self.view.init_values()
+        self.treeviewer.redraw()
 
     def update(self):
-        print("update1")
+        # this happens when the subset is changed, but also other places.
+        print("layer updated, redrawing")
+        self.treeviewer.redraw()
 
     def _on_fill_checked(self, *args):
         print("onf ill checked", args)
@@ -114,6 +142,7 @@ class TreeViewerState(ViewerState):
 from glue.utils.qt import load_ui
 import os
 from echo.qt import autoconnect_callbacks_to_qt
+from glue.core.message import LayerArtistUpdatedMessage, LayerArtistVisibilityMessage
 
 
 class TreeViewerStateWidget(QWidget):
@@ -127,6 +156,7 @@ class TreeViewerStateWidget(QWidget):
         self._connections = autoconnect_callbacks_to_qt(self.viewer_state, self.ui)
 
 from glue.viewers.common.qt.toolbar import BasicToolbar
+import traceback
 
 class TreeDataViewer(DataViewer):
     LABEL = "ete3 based Tree Viewer"
@@ -137,7 +167,7 @@ class TreeDataViewer(DataViewer):
     _subset_artist_cls = TreeLayerArtist
 
     _toolbar_cls = BasicToolbar
-    tools = ['tree:home', 'tree:rectzoom']
+    tools = ['tree:home', 'tree:rectzoom', 'tree:lineselect']
 
     # additional stuff for qt
 
@@ -148,20 +178,31 @@ class TreeDataViewer(DataViewer):
         super(TreeDataViewer, self).__init__(session, state=state, parent=parent)
         self.s = session
 
+        self.CACHED_title2color = defaultdict((lambda: "#FFFFFF"))
+
         assert isinstance(self.state, ViewerState)
-        self.state.add_callback("layers", self._on_layers_changed)
+        self.state.add_global_callback(self._on_layers_changed)
 
         self.state.add_callback("node_att", self._on_node_change)
         self.state.add_callback("showtext_att", self._on_showtext_change)
 
-        self._on_layers_changed()
 
         self.default_style = lambda: ete3.NodeStyle()
         self.tree_style = ete3.TreeStyle()
         self.tree_style.layout_fn = layout
 
+        self._on_layers_changed(None)
+
+
         # we do not have data yet
         # self.init_treedrawing(self.state.layer.data)
+
+    def register_to_hub(self, hub):
+        super(TreeDataViewer, self).register_to_hub(hub)
+        print("registering to hub")
+
+        #hub.subscribe(self, LayerArtistUpdatedMessage, handler = self._on_layers_changed)
+        #hub.subscribe(self, LayerArtistVisibilityMessage, handler = self._on_layers_changed)
 
     def _on_node_change(self, newval, **kwargs):
         print("on node change", newval, kwargs)
@@ -188,52 +229,46 @@ class TreeDataViewer(DataViewer):
         self.init_treedrawing(data)
         return super(TreeDataViewer, self).add_data(data)
 
-    # def add_subset(self, subset):
-    # print('adding subset')
-    ##if subset.data != self.data:
-    ##raise ValueError("subset parent data does not match existing tree data")
-    # return super(TreeDataViewer, self).add_subset(subset)
-
-    def _on_layers_changed(self, *args):
-        from collections import defaultdict
-
+    def get_title2color(self):
         self.title2color = defaultdict((lambda: "#FFFFFF"))
-        print("layers changed")
+
         for layerstate in self.layers:
             print("layerstate", layerstate)
             layer = layerstate.layer
             if isinstance(layer, Subset):
-                if "Subset" in layerstate.__str__():
-                    pass
-                    # import pdb
-                    # pdb.set_trace()
+
                 print("subset_mask")
+                # PROBLEM: why does this return all false until its refreshed..
                 print(layer.to_mask())
                 print("longlen", len(layer.data["tree nodes"]))
                 print("shortlen", len(layer.data["tree nodes"][layer.to_mask()]))
                 goodnames = layer.data["tree nodes"][layer.to_mask()]
+                print('')
                 for name in goodnames:
                     # TODO add color blending
                     if layerstate.visible:
                         self.title2color[name] = layer.style.color
                     else:
-                        print("uh")
                         self.title2color[name] = "#FFFFFF"
 
-                # { make code to tree node conversion }
-                print("found subset")
-
-                for node in layer.data.tdata.traverse():
-                    print("node.title", node.name)
-                    st = self.default_style()
-                    color = self.title2color[node.name]
-                    st["bgcolor"] = color
-                    node.set_style(st)
-
                 # redraw
-                self.redraw()
             else:
                 assert hasattr(layer, "tdata")
+
+
+    def _on_layers_changed(self, *args, **kwargs):
+        pr = cProfile.Profile()
+        pr.enable()
+        print ('-----------------START')
+        print("onlayerschanged args", args)
+        print("kwargs", kwargs)
+
+
+        # make sure it only tries to draw when it 
+        if hasattr(self, 'scene'):
+            self.redraw()
+        else:
+            print("scene not loaded yet")
 
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         assert cls == TreeLayerArtist
@@ -287,7 +322,24 @@ class TreeDataViewer(DataViewer):
 
         return True
 
+
     def redraw(self):
+
+        self.get_title2color()
+
+        if full_equal(self.CACHED_title2color, self.title2color):
+            print('drawing information not changed, not redrawing')
+            return
+
+        print('ACTUALLY REDRAWING !!!!')
+        self.CACHED_title2color = self.title2color
+
+        for node in self.data.tdata.traverse():
+            st = self.default_style()
+            color = self.title2color[node.name]
+            st["bgcolor"] = color
+            node.set_style(st)
+
         self.scene.draw()
         self.view.init_values()
 
@@ -343,6 +395,29 @@ class ZoomOut(CheckableTool):
         self.viewer.view.zoomrect.setVisible(False)
 
         self.viewer.view.mouseMode = DEFUALT_MOUSE_MODE
+
+    def close(self):
+        pass
+
+@viewer_tool
+class LineSelect(CheckableTool):
+
+    icon = 'glue_row_select'
+    tool_id = 'tree:lineselect'
+    action_text = 'select nodes using a collision line'
+    tool_tip = 'draw line to select'
+    shortcut = 'L'
+
+    def __init__(self, viewer):
+        super(CheckableTool, self).__init__(viewer)
+
+    def activate(self):
+        self.viewer.view.mouseMode = "lineselect"
+    def deactivate(self):
+        self.viewer.view.selector.setActive(False)
+        # setvisible(false)?
+        self.viewer.view.mouseMode = DEFUALT_MOUSE_MODE
+        # go through and unhighlight_node every node
 
     def close(self):
         pass
