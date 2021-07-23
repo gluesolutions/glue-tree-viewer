@@ -64,10 +64,33 @@ from glue.core.subset import CategorySubsetState
 import time
 
 
+class _PanItem(QGraphicsRectItem):
+    def __init__(self, parent=None):
+        QGraphicsRectItem.__init__(self, 0, 0, 0, 0)
+        self.Color = QColor("blue")
+
+        if parent:
+            self.setParentItem(parent)
+        self.points = []
+
+    def add_point(self, p):
+        self.points.append(p)
+
+    def paint(self, p, option, widget):
+
+        p.setPen(self.Color)
+        p.setBrush(QBrush(Qt.NoBrush))
+
+        for pt in self.points:
+            print('drawing point', pt)
+            p.drawEllipse(pt, 10, 10)
+
+
 class _ZoomboxItem(QGraphicsRectItem):
     def __init__(self, parent=None):
         QGraphicsRectItem.__init__(self, 0, 0, 0, 0)
         self.Color = QColor("blue")
+
         self._active = False
         self.inMotion = False
 
@@ -205,7 +228,12 @@ class _TreeView(QGraphicsView):
         # self.buffer_node = None
         self.selector = _SelectorItem(master_item)
         self.zoomrect = _ZoomboxItem(master_item)
+        self.pts = _PanItem(master_item)
+
         self.andSelect = False
+
+        self.panPoint = None
+        self.panCenter = None
 
     def resizeEvent(self, e):
         QGraphicsView.resizeEvent(self, e)
@@ -356,6 +384,9 @@ class _TreeView(QGraphicsView):
         # QGraphicsView.keyPressEvent(self, e)
 
     def mouseReleaseEvent(self, e):
+        self.panPoint = None
+        self.panCenter = None
+
         if self.mouseMode == "lineselect":
             self.selector.accumulate_selected()
             self.selector.setActive(False)
@@ -370,6 +401,21 @@ class _TreeView(QGraphicsView):
         # QGraphicsView.mouseReleaseEvent(self, e)
 
     def mousePressEvent(self, e):
+        if self.mouseMode == "pan":
+            pos = self.mapToScene(e.pos())
+
+            self.panPoint = pos
+
+            vp = self.mapToScene(self.viewport().rect()).boundingRect().center()
+            x,y = vp.x(), vp.y()
+
+            self.panCenter = vp
+            #self.pts.add_point(self.panCenter)
+            #self.pts.add_point(self.panPoint)
+
+            #print('adding points', self.panCenter)
+            #print('adding points2', self.panPoint)
+
         if self.mouseMode == "lineselect":
             pos = self.mapToScene(e.pos())
             x, y = pos.x(), pos.y()
@@ -398,6 +444,17 @@ class _TreeView(QGraphicsView):
         # QGraphicsView.mousePressEvent(self, e)
 
     def mouseMoveEvent(self, e):
+        if self.mouseMode == "pan":
+
+            if self.panCenter:
+                mouse = self.mapToScene(e.pos())
+                diff = mouse - self.panPoint
+
+                newcenter = self.panCenter - diff
+                print('center %s - diff %s' % (newcenter, diff))
+
+                self.centerOn(newcenter)
+
         if self.mouseMode == "lineselect":
 
             if self.selector.isActive():

@@ -168,7 +168,7 @@ class TreeDataViewer(DataViewer):
     _subset_artist_cls = TreeLayerArtist
 
     _toolbar_cls = BasicToolbar
-    tools = ["tree:home", "tree:rectzoom", "tree:lineselect"]
+    tools = ["tree:home", "tree:pan", "tree:rectzoom", "tree:lineselect"]
 
     # additional stuff for qt
 
@@ -235,27 +235,32 @@ class TreeDataViewer(DataViewer):
     def get_title2color(self):
         self.title2color = defaultdict((lambda: "#FFFFFF"))
 
-        for layerstate in self.layers:
-            print("layerstate", layerstate)
-            layer = layerstate.layer
+        for layer_artist in self.layers:
+            print("layerstate", layer_artist)
+            layer = layer_artist.layer
             if isinstance(layer, Subset):
 
                 # print("subset_mask")
-                ## PROBLEM: why does this return all false until its refreshed..
+                # PROBLEM: why does this return all false until its refreshed..
                 # print(layer.to_mask())
                 # print("longlen", len(layer.data["tree nodes"]))
                 # print("shortlen", len(layer.data["tree nodes"][layer.to_mask()]))
                 cid = layer.data.tree_component_id
-                goodnames = layer.data[cid][layer.to_mask()]
+                from glue.core.exceptions import IncompatibleAttribute
 
-                for name in goodnames:
-                    # TODO add color blending
-                    if layerstate.visible:
-                        self.title2color[name] = layer.style.color
-                    else:
-                        self.title2color[name] = "#FFFFFF"
+                try:
+                    goodnames = layer.data[cid][layer.to_mask()]
+                except IncompatibleAttribute as exc:
+                    if layer_artist.enabled:
+                        layer_artist.disable_incompatible_subset()
+                else:
+                    for name in goodnames:
+                        # TODO add color blending
+                        if layer_artist.visible:
+                            self.title2color[name] = layer.style.color
+                        else:
+                            self.title2color[name] = "#FFFFFF"
 
-                # redraw
             else:
                 assert hasattr(layer, "tdata")
 
@@ -435,6 +440,29 @@ class LineSelect(CheckableTool):
 
     def close(self):
         pass
+
+
+@viewer_tool
+class PanTool(CheckableTool):
+
+    icon = "glue_move"
+    tool_id = "tree:pan"
+    action_text = "Pan view of tree with mouse"
+    tool_tip = "Pan view of tree with mouse"
+    shortcut = "M"
+
+    def __init__(self, viewer):
+        super(PanTool, self).__init__(viewer)
+
+    def activate(self):
+        self.viewer.view.mouseMode = "pan"
+
+    def deactivate(self):
+        self.viewer.view.mouseMode = DEFUALT_MOUSE_MODE
+
+    def close(self):
+        pass
+
 
 
 from glue.config import qt_client
