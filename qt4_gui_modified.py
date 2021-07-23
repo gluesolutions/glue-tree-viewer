@@ -57,7 +57,6 @@ from qtpy.QtGui import *
 from ete3.treeview.main import save, _leaf
 from ete3.treeview import random_color
 from ete3.treeview.qt4_render import render
-from ete3.treeview.node_gui_actions import NewickDialog
 from ete3 import Tree, TreeStyle
 
 from glue.core.subset import CategorySubsetState
@@ -78,7 +77,10 @@ class _ZoomboxItem(QGraphicsRectItem):
     def paint(self, p, option, widget):
         p.setPen(self.Color)
         p.setBrush(QBrush(Qt.NoBrush))
-        p.drawRect(self.rect().x(),self.rect().y(),self.rect().width(),self.rect().height())
+        p.drawRect(
+            self.rect().x(), self.rect().y(), self.rect().width(), self.rect().height()
+        )
+
 
 class _SelectorItem(QGraphicsLineItem):
     def __init__(self, parent=None):
@@ -101,22 +103,19 @@ class _SelectorItem(QGraphicsLineItem):
         return self.selected_cache
 
     def accumulate_selected(self):
-        self.selected_cache += self.get_nodes_under_line()
+        self.selected_cache |= self.get_nodes_under_line()
 
     def clear_cache(self):
+        self.scene().view.unhighlight_all()
+
         del self.selected_cache
         self.selected_cache = set()
 
     def get_nodes_under_line(self):
-        # print('-- getting selected nodes')
-        # selPath = QPainterPath()
-        # selPath.addLine(self.line())
-        # elf.scene().setSelectionArea(selPath)
 
         n2i = self.scene().n2i
         selectednodes = set()
         for node, item in n2i.items():
-            # print('node items')
 
             R = item.mapToScene(item.nodeRegion).boundingRect()
 
@@ -142,9 +141,11 @@ class _SelectorItem(QGraphicsLineItem):
 
             # R.adjust(-60, -60, 60, 60)
 
-        self.selected_cache = self.selected_cache.union(selectednodes)
         # TODO move drawing to other place
         for node in self.selected_cache:
+            self.scene().view.highlight_node(node)
+
+        for node in selectednodes:
             self.scene().view.highlight_node(node)
 
         return selectednodes
@@ -201,9 +202,7 @@ class _TreeView(QGraphicsView):
     def init_values(self):
         master_item = self.scene().master_item
         self.n2hl = {}
-        self.focus_highlight = QGraphicsRectItem(master_item)
         # self.buffer_node = None
-        self.focus_node = None
         self.selector = _SelectorItem(master_item)
         self.zoomrect = _ZoomboxItem(master_item)
         self.andSelect = False
@@ -231,33 +230,41 @@ class _TreeView(QGraphicsView):
             self.scale(xfactor, yfactor)
 
     def highlight_node(self, n, fullRegion=False, fg="red", bg="gray", permanent=False):
+
+        if n in self.n2hl:
+            # don't rehightlight an already higlighted node
+            return None
+
         self.unhighlight_node(n)
+
         item = self.scene().n2i[n]
         hl = QGraphicsRectItem(item.content)
+
         if fullRegion:
             hl.setRect(item.fullRegion)
         else:
             hl.setRect(item.nodeRegion)
+
         hl.setPen(QColor(fg))
         hl.setBrush(QColor(bg))
         hl.setOpacity(0.2)
+
         # save info in Scene
         self.n2hl[n] = hl
-        if permanent:
-            item.highlighted = True
 
     def unhighlight_node(self, n, reset=False):
         if n in self.n2hl:
             item = self.scene().n2i[n]
-            if not item.highlighted:
-                self.scene().removeItem(self.n2hl[n])
-                del self.n2hl[n]
-            elif reset:
-                self.scene().removeItem(self.n2hl[n])
-                del self.n2hl[n]
-                item.highlighted = False
-            else:
-                pass
+            self.scene().removeItem(self.n2hl[n])
+            del self.n2hl[n]
+
+    def unhighlight_all(self):
+        for n in self.n2hl:
+            item = self.scene().n2i[n]
+            self.scene().removeItem(self.n2hl[n])
+
+        del self.n2hl
+        self.n2hl = {}
 
     def wheelEvent(self, e):
         # qt4/5
@@ -300,23 +307,6 @@ class _TreeView(QGraphicsView):
             else:
                 self.verticalScrollBar().setValue(self.verticalScrollBar().value() + 20)
 
-    def set_focus(self, node):
-        i = self.scene().n2i[node]
-        self.focus_highlight.setPen(QColor("red"))
-        self.focus_highlight.setBrush(QColor("SteelBlue"))
-        self.focus_highlight.setOpacity(0.2)
-        self.focus_highlight.setParentItem(i.content)
-        self.focus_highlight.setLine(i.fullRegion)
-        self.focus_highlight.setVisible(True)
-        self.prop_table.update_properties(node)
-        # self.focus_highlight.setLine(i.nodeRegion)
-        self.focus_node = node
-        self.update()
-
-    def hide_focus(self):
-        return
-        # self.focus_highlight.setVisible(False)
-
     def keyReleaseEvent(self, e):
         if e.key() == Qt.Key_Shift:
             self.andSelect = False
@@ -328,100 +318,56 @@ class _TreeView(QGraphicsView):
         control = e.modifiers() & Qt.ControlModifier
         shift = e.modifiers() & Qt.ShiftModifier
         if shift:
-            print(shift)
             self.andSelect = True
-        elif control:
-            if key == Qt.Key_Left:
-                self.horizontalScrollBar().setValue(
-                    self.horizontalScrollBar().value() - 20
-                )
-                self.update()
-            elif key == Qt.Key_Right:
-                self.horizontalScrollBar().setValue(
-                    self.horizontalScrollBar().value() + 20
-                )
-                self.update()
-            elif key == Qt.Key_Up:
-                self.verticalScrollBar().setValue(self.verticalScrollBar().value() - 20)
-                self.update()
-            elif key == Qt.Key_Down:
-                self.verticalScrollBar().setValue(self.verticalScrollBar().value() + 20)
-                self.update()
         else:
-            if not self.focus_node:
-                self.focus_node = self.scene().tree
 
-            if key == Qt.Key_Left:
-                if self.focus_node.up:
-                    new_focus_node = self.focus_node.up
-                    self.set_focus(new_focus_node)
-            elif key == Qt.Key_Right:
-                if self.focus_node.children:
-                    new_focus_node = self.focus_node.children[0]
-                    self.set_focus(new_focus_node)
-            elif key == Qt.Key_Up:
-                if self.focus_node.up:
-                    i = self.focus_node.up.children.index(self.focus_node)
-                    if i > 0:
-                        new_focus_node = self.focus_node.up.children[i - 1]
-                        self.set_focus(new_focus_node)
-                    elif self.focus_node.up:
-                        self.set_focus(self.focus_node.up)
-
-            elif key == Qt.Key_Down:
-                if self.focus_node.up:
-                    i = self.focus_node.up.children.index(self.focus_node)
-                    if i < len(self.focus_node.up.children) - 1:
-                        new_focus_node = self.focus_node.up.children[i + 1]
-                        self.set_focus(new_focus_node)
-                    elif self.focus_node.up:
-                        self.set_focus(self.focus_node.up)
-
-            elif key == Qt.Key_Escape:
-                self.hide_focus()
-            elif key == Qt.Key_Enter or key == Qt.Key_Return:
-                print("enter pressed")
+            # check not active so that you cant press enter before releasing mouse
+            if (
+                key == Qt.Key_Enter
+                or key == Qt.Key_Return
+                and not self.selector.isActive()
+            ):
                 selectednodes = self.selector.get_nodes()
 
+                # make sure visual state is synced with what goes into glue
+                a = set([node for node, _ in self.n2hl.items()])
+                assert a == selectednodes
+
+                # self.data has tdata
                 data = self.data
+
+                cid = data.tree_component_id
+
 
                 # this should be avoided, we are doing the opposite in the glue library code...
                 codeidxs = np.isin(
-                    data["tree nodes"], np.array([n.name for n in selectednodes])
+                    data[cid], np.array([n.name for n in selectednodes])
                 )
-                codes = data["tree nodes"].codes[codeidxs]
+                codes = data[cid].codes[codeidxs]
                 print("codes", codes)
 
-                subset = CategorySubsetState("tree nodes", codes)
+                subset = CategorySubsetState(cid, codes)
 
                 # mode = self.session.edit_subset_mode
                 # mode.update(data, subset)
 
                 self.apply_subset_state(subset)
 
-                # self.prop_table.tableView.setFocus()
-            elif key == Qt.Key_Space:
-                self.highlight_node(
-                    self.focus_node,
-                    fullRegion=True,
-                    bg=random_color(l=0.5, s=0.5),
-                    permanent=True,
-                )
-        QGraphicsView.keyPressEvent(self, e)
+        # QGraphicsView.keyPressEvent(self, e)
 
     def mouseReleaseEvent(self, e):
         if self.mouseMode == "lineselect":
-            self.scene().view.hide_focus()
-            curr_pos = self.mapToScene(e.pos())
-            if hasattr(self.selector, "startPoint"):
-                x = min(self.selector.startPoint.x(), curr_pos.x())
-                y = min(self.selector.startPoint.y(), curr_pos.y())
-                w = max(self.selector.startPoint.x(), curr_pos.x()) - x
-                h = max(self.selector.startPoint.y(), curr_pos.y()) - y
-                if self.selector.startPoint == curr_pos:
-                    self.selector.setVisible(False)
-                    self.selector.setActive(False)
-        QGraphicsView.mouseReleaseEvent(self, e)
+            self.selector.accumulate_selected()
+            self.selector.setActive(False)
+            self.selector.setVisible(False)
+        if self.mouseMode == "rectzoom":
+            # convert rect to have positive coordinates
+            self.fitInView(self.zoomrect.rect().normalized(), Qt.KeepAspectRatio)
+
+            self.zoomrect.setActive(False)
+            self.zoomrect.setVisible(False)
+
+        # QGraphicsView.mouseReleaseEvent(self, e)
 
     def mousePressEvent(self, e):
         if self.mouseMode == "lineselect":
@@ -431,79 +377,42 @@ class _TreeView(QGraphicsView):
                 self.selector.accumulate_selected()
             else:
                 self.selector.clear_cache()
-                self.selector.setLine(x, y, x, y)
-                self.selector.startPoint = QPointF(x, y)
-                self.selector.setActive(True)
-                self.selector.setVisible(True)
+
+            self.selector.setLine(x, y, x, y)
+            self.selector.startPoint = QPointF(x, y)
+
+            self.selector.setActive(True)
+            self.selector.setVisible(True)
 
         elif self.mouseMode == "rectzoom":
             pos = self.mapToScene(e.pos())
-            x,y = pos.x(), pos.y()
+            x, y = pos.x(), pos.y()
 
-            if self.zoomrect.inMotion == False:
-                self.zoomrect.inMotion = True
+            self.zoomrect.setRect(x, y, 0, 0)
+            self.zoomrect.setActive(True)
+            self.zoomrect.setVisible(True)
 
-                self.zoomrect.setRect(x, y, 0, 0)
-                self.zoomrect.setActive(True)
-                self.zoomrect.setVisible(True)
-            else:
-                self.zoomrect.inMotion = False
 
-                # convert rect to have positive coordinates
-                self.fitInView(self.zoomrect.rect().normalized(), Qt.KeepAspectRatio)
-
-                self.zoomrect.setActive(False)
-                self.zoomrect.setVisible(False)
-                
-                
-
-        QGraphicsView.mousePressEvent(self, e)
+        # NOTE: if we want to add mouse click selection, we have to overwrite the mousePressEvent methods in
+        #            node_gui_actions
+        # QGraphicsView.mousePressEvent(self, e)
 
     def mouseMoveEvent(self, e):
         if self.mouseMode == "lineselect":
-            curr_pos = self.mapToScene(e.pos())
+
             if self.selector.isActive():
+                curr_pos = self.mapToScene(e.pos())
                 start = self.selector.startPoint
                 self.selector.setLine(start.x(), start.y(), curr_pos.x(), curr_pos.y())
                 self.selector.get_nodes_under_line()
 
         elif self.mouseMode == "rectzoom":
-            if self.zoomrect.inMotion:
+
+            if self.zoomrect.isActive():
                 curr_pos = self.mapToScene(e.pos())
                 r = self.zoomrect.rect()
                 w = curr_pos.x() - r.x()
-                h = curr_pos.y() - r.y() 
+                h = curr_pos.y() - r.y()
                 self.zoomrect.setRect(r.x(), r.y(), w, h)
 
-        QGraphicsView.mouseMoveEvent(self, e)
-
-
-class _BasicNodeActions(object):
-    """ Should be added as ActionDelegator """
-
-    @staticmethod
-    def init(obj):
-        obj.setCursor(Qt.PointingHandCursor)
-        obj.setAcceptHoverEvents(True)
-
-    @staticmethod
-    def mousePressEvent(obj, e):
-        print("Click")
-
-    @staticmethod
-    def mouseReleaseEvent(obj, e):
-        if e.button() == Qt.RightButton:
-            obj.showActionPopup()
-        elif e.button() == Qt.LeftButton:
-            obj.scene().view.set_focus(obj.node)
-            # obj.scene().view.prop_table.update_properties(obj.node)
-
-    @staticmethod
-    def hoverEnterEvent(self, e):
-        # self.scene().view.highlight_node(self.node, fullRegion=True)
-        pass
-
-    @staticmethod
-    def hoverLeaveEvent(self, e):
-        # self.scene().view.unhighlight_node(self.node)
-        pass
+        # QGraphicsView.mouseMoveEvent(self, e)

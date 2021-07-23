@@ -14,15 +14,19 @@ from glue.config import data_factory, link_function
 # linking info
 # http://docs.glueviz.org/en/stable/developer_guide/linking.html
 def tree_process(fname):
+    import os
 
     result = Data()
-    result.label = "tree data"
+    result.label = "tree data[%s]" % os.path.basename(fname)
+
     tree = ete3.Tree(fname, format=0)
     result.tdata = tree
 
+    result.tree_component_id = "tree nodes %s" % result.uuid
+
     nodes = np.array([n.name for n in tree.traverse("postorder")])
 
-    result.add_component(CategoricalComponent(nodes), "tree nodes")
+    result.add_component(CategoricalComponent(nodes), result.tree_component_id)
 
     return result
 

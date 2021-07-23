@@ -28,6 +28,7 @@ from glue.viewers.common.layer_artist import LayerArtist
 import cProfile
 import pstats
 
+
 def full_equal(dfd1, dfd2):
     if dfd1 == dfd2:
         return True
@@ -36,16 +37,14 @@ def full_equal(dfd1, dfd2):
 
     return all(dfd1[k] == dfd2[k] for k in allkeys)
 
+
 a = defaultdict(int)
 b = defaultdict(int)
 
-a['key'] = 0
+a["key"] = 0
 
-assert(a != b)
-assert(full_equal(a,b))
-
-
-
+assert a != b
+assert full_equal(a, b)
 
 
 class TreeLayerState(LayerState):
@@ -72,10 +71,10 @@ class TreeLayerArtist(LayerArtist):
 
     def remove(self):
         print("remove1")
-        self.treeviewer.redraw()
+        #self.treeviewer.redraw()
 
     def redraw(self):
-        print('redraw1')
+        print("redraw1")
         # self.scene.draw()
         # self.view.init_values()
         self.treeviewer.redraw()
@@ -155,8 +154,10 @@ class TreeViewerStateWidget(QWidget):
         self.viewer_state = viewer_state
         self._connections = autoconnect_callbacks_to_qt(self.viewer_state, self.ui)
 
+
 from glue.viewers.common.qt.toolbar import BasicToolbar
 import traceback
+
 
 class TreeDataViewer(DataViewer):
     LABEL = "ete3 based Tree Viewer"
@@ -167,7 +168,7 @@ class TreeDataViewer(DataViewer):
     _subset_artist_cls = TreeLayerArtist
 
     _toolbar_cls = BasicToolbar
-    tools = ['tree:home', 'tree:rectzoom', 'tree:lineselect']
+    tools = ["tree:home", "tree:rectzoom", "tree:lineselect"]
 
     # additional stuff for qt
 
@@ -178,6 +179,8 @@ class TreeDataViewer(DataViewer):
         super(TreeDataViewer, self).__init__(session, state=state, parent=parent)
         self.s = session
 
+        # TODO move these to treeviewerstate?
+        print('cache born, reset to epmty')
         self.CACHED_title2color = defaultdict((lambda: "#FFFFFF"))
 
         assert isinstance(self.state, ViewerState)
@@ -186,7 +189,6 @@ class TreeDataViewer(DataViewer):
         self.state.add_callback("node_att", self._on_node_change)
         self.state.add_callback("showtext_att", self._on_showtext_change)
 
-
         self.default_style = lambda: ete3.NodeStyle()
         self.tree_style = ete3.TreeStyle()
         self.tree_style.layout_fn = layout
@@ -194,15 +196,12 @@ class TreeDataViewer(DataViewer):
         self._on_layers_changed(None)
 
 
-        # we do not have data yet
-        # self.init_treedrawing(self.state.layer.data)
-
     def register_to_hub(self, hub):
         super(TreeDataViewer, self).register_to_hub(hub)
         print("registering to hub")
 
-        #hub.subscribe(self, LayerArtistUpdatedMessage, handler = self._on_layers_changed)
-        #hub.subscribe(self, LayerArtistVisibilityMessage, handler = self._on_layers_changed)
+        # hub.subscribe(self, LayerArtistUpdatedMessage, handler = self._on_layers_changed)
+        # hub.subscribe(self, LayerArtistVisibilityMessage, handler = self._on_layers_changed)
 
     def _on_node_change(self, newval, **kwargs):
         print("on node change", newval, kwargs)
@@ -221,10 +220,14 @@ class TreeDataViewer(DataViewer):
 
     def _on_showtext_change(self, newval, **kwargs):
         self.tree_style.show_leaf_name = newval
-        self.init_treedrawing(self.data)
+        #self.redraw()
 
     def add_data(self, data):
         assert hasattr(data, "tdata")
+
+        for node in data.tdata.traverse():
+            st = self.default_style()
+            node.set_style(st)
 
         self.init_treedrawing(data)
         return super(TreeDataViewer, self).add_data(data)
@@ -237,13 +240,14 @@ class TreeDataViewer(DataViewer):
             layer = layerstate.layer
             if isinstance(layer, Subset):
 
-                print("subset_mask")
-                # PROBLEM: why does this return all false until its refreshed..
-                print(layer.to_mask())
-                print("longlen", len(layer.data["tree nodes"]))
-                print("shortlen", len(layer.data["tree nodes"][layer.to_mask()]))
-                goodnames = layer.data["tree nodes"][layer.to_mask()]
-                print('')
+                # print("subset_mask")
+                ## PROBLEM: why does this return all false until its refreshed..
+                # print(layer.to_mask())
+                # print("longlen", len(layer.data["tree nodes"]))
+                # print("shortlen", len(layer.data["tree nodes"][layer.to_mask()]))
+                cid = layer.data.tree_component_id
+                goodnames = layer.data[cid][layer.to_mask()]
+
                 for name in goodnames:
                     # TODO add color blending
                     if layerstate.visible:
@@ -255,17 +259,11 @@ class TreeDataViewer(DataViewer):
             else:
                 assert hasattr(layer, "tdata")
 
-
     def _on_layers_changed(self, *args, **kwargs):
         pr = cProfile.Profile()
         pr.enable()
-        print ('-----------------START')
-        print("onlayerschanged args", args)
-        print("kwargs", kwargs)
-
-
-        # make sure it only tries to draw when it 
-        if hasattr(self, 'scene'):
+        # make sure it only tries to draw when it
+        if hasattr(self, "scene"):
             self.redraw()
         else:
             print("scene not loaded yet")
@@ -285,6 +283,7 @@ class TreeDataViewer(DataViewer):
     def init_treedrawing(self, data):
         self.data = data
         t = self.data.tdata
+
 
         # do qt stuff {
 
@@ -318,20 +317,21 @@ class TreeDataViewer(DataViewer):
 
         self.setCentralWidget(self.view)
 
-        self.redraw()
+        self.scene.draw()
+        self.view.init_values()
 
         return True
 
-
     def redraw(self):
+        print('redrawing')
 
         self.get_title2color()
 
         if full_equal(self.CACHED_title2color, self.title2color):
-            print('drawing information not changed, not redrawing')
+            print("cache: drawing information not changed, not redrawing")
             return
 
-        print('ACTUALLY REDRAWING !!!!')
+        print("cache: ACTUALLY REDRAWING !!!!")
         self.CACHED_title2color = self.title2color
 
         for node in self.data.tdata.traverse():
@@ -346,23 +346,29 @@ class TreeDataViewer(DataViewer):
     def zoomOut(self):
         from qtpy import QtCore
         from qtpy.QtCore import Qt
-       # from https://github.com/etetoolkit/ete/blob/1f587a315f3c61140e3bdbe697e3e86eda6d2eca/ete3/treeview/qt4_gui.py#L231
+
+        # from https://github.com/etetoolkit/ete/blob/1f587a315f3c61140e3bdbe697e3e86eda6d2eca/ete3/treeview/qt4_gui.py#L231
         self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
 
     def zoomHome(self):
         from qtpy import QtCore
         from qtpy.QtCore import Qt
-       # from https://github.com/etetoolkit/ete/blob/1f587a315f3c61140e3bdbe697e3e86eda6d2eca/ete3/treeview/qt4_gui.py#L231
+
+        # from https://github.com/etetoolkit/ete/blob/1f587a315f3c61140e3bdbe697e3e86eda6d2eca/ete3/treeview/qt4_gui.py#L231
         self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
+
+    def remove(self):
+        print("remove2")
+
 
 @viewer_tool
 class HomeButton(Tool):
 
-    icon = 'glue_home'
-    tool_id = 'tree:home'
-    action_text = 'Navigates camera to look at root node'
-    tool_tip = 'View tree root'
-    shortcut = 'H'
+    icon = "glue_home"
+    tool_id = "tree:home"
+    action_text = "Navigates camera to look at root node"
+    tool_tip = "View tree root"
+    shortcut = "H"
 
     def __init__(self, viewer):
         super(HomeButton, self).__init__(viewer)
@@ -373,22 +379,25 @@ class HomeButton(Tool):
     def close(self):
         pass
 
+
 DEFUALT_MOUSE_MODE = "none"
+
 
 @viewer_tool
 class ZoomOut(CheckableTool):
 
-    icon = 'glue_zoom_to_rect'
-    tool_id = 'tree:rectzoom'
-    action_text = 'Zooms camera to rect selection'
-    tool_tip = 'View tree root'
-    shortcut = 'Z'
+    icon = "glue_zoom_to_rect"
+    tool_id = "tree:rectzoom"
+    action_text = "Zooms camera to rect selection"
+    tool_tip = "View tree root"
+    shortcut = "Z"
 
     def __init__(self, viewer):
         super(ZoomOut, self).__init__(viewer)
 
     def activate(self):
         self.viewer.view.mouseMode = "rectzoom"
+
     def deactivate(self):
         self.viewer.view.zoomrect.inMotion = False
         self.viewer.view.zoomrect.setActive(False)
@@ -399,22 +408,27 @@ class ZoomOut(CheckableTool):
     def close(self):
         pass
 
+
 @viewer_tool
 class LineSelect(CheckableTool):
 
-    icon = 'glue_row_select'
-    tool_id = 'tree:lineselect'
-    action_text = 'select nodes using a collision line'
-    tool_tip = 'draw line to select'
-    shortcut = 'L'
+    icon = "glue_row_select"
+    tool_id = "tree:lineselect"
+    action_text = "select nodes using a collision line"
+    tool_tip = "draw line to select"
+    shortcut = "L"
 
     def __init__(self, viewer):
         super(CheckableTool, self).__init__(viewer)
 
     def activate(self):
         self.viewer.view.mouseMode = "lineselect"
+
     def deactivate(self):
+
         self.viewer.view.selector.setActive(False)
+        self.viewer.view.selector.clear_cache()
+
         # setvisible(false)?
         self.viewer.view.mouseMode = DEFUALT_MOUSE_MODE
         # go through and unhighlight_node every node
