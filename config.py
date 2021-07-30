@@ -20,7 +20,9 @@ def tree_process(fname):
     result = Data()
     result.label = "tree data[%s]" % os.path.basename(fname)
 
-    tree = ete3.Tree(fname, format=0)
+    # based on http://etetoolkit.org/docs/latest/tutorial/tutorial_trees.html#reading-and-writing-newick-trees
+    # you probably don't want 0, because support values are strange
+    tree = ete3.Tree(fname, format=1)
     result.tdata = tree
 
     result.tree_component_id = "tree nodes %s" % result.uuid

@@ -140,10 +140,16 @@ class _SelectorItem(QGraphicsLineItem):
         selectednodes = set()
         for node, item in n2i.items():
 
-            R = item.mapToScene(item.nodeRegion).boundingRect()
+            hlbox = item.nodeRegion
 
-            # change this to four lines if its jank...
-            # or one line preferrably
+            if not node.is_leaf():
+                centery = item.center
+                hlbox.setTop(centery - 5)
+                hlbox.setBottom(centery + 5)
+
+            item.highlightbox = hlbox
+            R = item.mapToScene(hlbox).boundingRect()
+
             line1 = QLineF(R.topLeft(), R.bottomRight())
             line2 = QLineF(R.topRight(), R.bottomLeft())
 
@@ -268,8 +274,8 @@ class _TreeView(QGraphicsView):
         item = self.scene().n2i[n]
         hl = QGraphicsRectItem(item.content)
 
-        if fullRegion:
-            hl.setRect(item.fullRegion)
+        if hasattr(item, 'highlightbox'):
+            hl.setRect(item.highlightbox)
         else:
             hl.setRect(item.nodeRegion)
 
