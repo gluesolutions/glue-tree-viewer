@@ -92,7 +92,6 @@ class _ZoomboxItem(QGraphicsRectItem):
         self.Color = QColor("blue")
 
         self._active = False
-        self.inMotion = False
 
         if parent:
             self.setParentItem(parent)
@@ -399,7 +398,21 @@ class _TreeView(QGraphicsView):
             self.selector.setVisible(False)
         if self.mouseMode == "rectzoom":
             # convert rect to have positive coordinates
-            self.fitInView(self.zoomrect.rect().normalized(), Qt.KeepAspectRatio)
+            rect = self.zoomrect.rect()
+            normd = rect.normalized()
+            #{A}
+
+            self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+            
+            self.fitInView(normd, Qt.KeepAspectRatioByExpanding)
+
+            self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+
+            #self.ensureVisible(normd, 10, 10)
+            #self.centerOn(normd.center())
 
             self.zoomrect.setActive(False)
             self.zoomrect.setVisible(False)
@@ -416,6 +429,7 @@ class _TreeView(QGraphicsView):
             x,y = vp.x(), vp.y()
 
             self.panCenter = vp
+# scrollbars. You can toggle the scrollbar policies to always on or always off to prevent this (see horizontalScrollBarPolicy() and verticalScrollBarPolicy()).
             #self.pts.add_point(self.panCenter)
             #self.pts.add_point(self.panPoint)
 
