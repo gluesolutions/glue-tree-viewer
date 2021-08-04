@@ -239,7 +239,6 @@ class TreeDataViewer(DataViewer):
             print("layerstate", layer_artist)
             layer = layer_artist.layer
             if isinstance(layer, Subset):
-
                 # print("subset_mask")
                 # PROBLEM: why does this return all false until its refreshed..
                 # print(layer.to_mask())
@@ -341,15 +340,17 @@ class TreeDataViewer(DataViewer):
 
         for node in self.data.tdata.traverse():
             st = self.default_style()
-            color = self.title2color[node.name]
+            nn = node.idx
+            color = self.title2color[nn]
             st["bgcolor"] = color
             node.set_style(st)
 
         self.scene.draw()
+
+        # TODO: can we get rid of init_values here?
         self.view.init_values()
 
     def zoomOut(self):
-        from qtpy import QtCore
         from qtpy.QtCore import Qt
 
         # from https://github.com/etetoolkit/ete/blob/1f587a315f3c61140e3bdbe697e3e86eda6d2eca/ete3/treeview/qt4_gui.py#L231
@@ -401,10 +402,12 @@ class ZoomOut(CheckableTool):
         super(ZoomOut, self).__init__(viewer)
 
     def activate(self):
+        self.viewer.view.zoomrect.setActive(False)
+        self.viewer.view.zoomrect.setVisible(False)
+
         self.viewer.view.mouseMode = "rectzoom"
 
     def deactivate(self):
-        self.viewer.view.zoomrect.inMotion = False
         self.viewer.view.zoomrect.setActive(False)
         self.viewer.view.zoomrect.setVisible(False)
 

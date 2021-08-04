@@ -371,10 +371,12 @@ class _TreeView(QGraphicsView):
 
                 cid = data.tree_component_id
 
-
                 # this should be avoided, we are doing the opposite in the glue library code...
+                #{A} question: if this is changed to int, will the dendrogram linking work?
+                #              if yes: work on making int categories properly
+                #              if no: ?
                 codeidxs = np.isin(
-                    data[cid], np.array([n.name for n in selectednodes])
+                    data[cid], np.array([n.idx for n in selectednodes])
                 )
                 codes = data[cid].codes[codeidxs]
                 print("codes", codes)
