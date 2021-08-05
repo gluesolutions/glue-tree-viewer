@@ -31,6 +31,7 @@ from glue.external.echo import CallbackProperty
 from glue.core.data_combo_helper import ComponentIDComboHelper
 from glue.config import viewer_tool
 from glue.viewers.common.tool import CheckableTool, Tool
+from glue.core.exceptions import IncompatibleAttribute
 
 from collections import defaultdict
 
@@ -76,7 +77,7 @@ class TreeLayerArtist(LayerArtist):
 
     _layer_state_cls = TreeLayerState
 
-    def __init__(self, apply_subset_state, parent, *args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         self.treeviewer = parent
         super(TreeLayerArtist, self).__init__(*args, **kwargs)
 
@@ -202,13 +203,6 @@ class TreeDataViewer(DataViewer):
         self._on_layers_changed(None)
 
 
-    def register_to_hub(self, hub):
-        super(TreeDataViewer, self).register_to_hub(hub)
-        print("registering to hub")
-
-        # hub.subscribe(self, LayerArtistUpdatedMessage, handler = self._on_layers_changed)
-        # hub.subscribe(self, LayerArtistVisibilityMessage, handler = self._on_layers_changed)
-
     def _on_node_change(self, newval, **kwargs):
         print("on node change", newval, kwargs)
         # QUESTION are there just a billion nodestyle classes clogging things up?
@@ -222,11 +216,11 @@ class TreeDataViewer(DataViewer):
             # PERFORMANCE this creates tons of garbage
             node.set_style(newstylefn())
             # TODO will not last after layers update
-        self.redraw()
+        self.redraw(force=True)
 
     def _on_showtext_change(self, newval, **kwargs):
         self.tree_style.show_leaf_name = newval
-        #self.redraw()
+        self.redraw(force=True)
 
     def add_data(self, data):
         assert hasattr(data, "tdata")
@@ -242,16 +236,10 @@ class TreeDataViewer(DataViewer):
         self.title2color = defaultdict((lambda: []))
 
         for layer_artist in self.layers:
-            print("layerstate", layer_artist)
             layer = layer_artist.layer
             if isinstance(layer, Subset):
-                # print("subset_mask")
-                # PROBLEM: why does this return all false until its refreshed..
-                # print(layer.to_mask())
-                # print("longlen", len(layer.data["tree nodes"]))
-                # print("shortlen", len(layer.data["tree nodes"][layer.to_mask()]))
+
                 cid = layer.data.tree_component_id
-                from glue.core.exceptions import IncompatibleAttribute
 
                 try:
                     goodnames = layer.data[cid][layer.to_mask()]
@@ -281,7 +269,6 @@ class TreeDataViewer(DataViewer):
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         assert cls == TreeLayerArtist
         return cls(
-            self.apply_subset_state,
             self,
             self.state,
             layer=layer,
@@ -347,11 +334,11 @@ class TreeDataViewer(DataViewer):
 
     
 
-    def redraw(self):
+    def redraw(self, force=False):
 
         self.get_title2color()
 
-        if full_equal(self.CACHED_title2color, self.title2color):
+        if not force and full_equal(self.CACHED_title2color, self.title2color):
             return
 
         self.CACHED_title2color = self.title2color
@@ -373,8 +360,6 @@ class TreeDataViewer(DataViewer):
 
         self.scene.draw()
         self.view.init_values()
-
-        # TODO: can we get rid of init_values here?
 
 
 @viewer_tool
@@ -440,6 +425,9 @@ class PointSelect(CheckableTool):
 
     def deactivate(self):
         self.viewer.view.mouseMode = DEFUALT_MOUSE_MODE
+
+    def close(self):
+        pass
 
 @viewer_tool
 class LineSelect(CheckableTool):
