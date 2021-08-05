@@ -4,6 +4,7 @@ from glue.core.component import CategoricalComponent
 from glue.core.component_id import ComponentID
 from glue.core.data import BaseCartesianData, Data
 from glue.utils import view_shape
+
 import ete3
 import viewer
 from glue import qglue

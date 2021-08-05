@@ -39,52 +39,53 @@
 # #END_LICENSE#############################################################
 from __future__ import absolute_import
 from __future__ import print_function
-import re
 import six
-import numpy as np
 
 # try:
 #     from .qt import QtOpenGL
 #     USE_GL = True
 # except ImportError:
 #     USE_GL = False
-USE_GL = False  # Temporarily disabled
+
+USE_GL = False
 
 from qtpy.QtWidgets import *
 import qtpy.QtCore as QtCore
 from qtpy.QtCore import Qt, QPointF, QLineF
 from qtpy.QtGui import *
-from ete3.treeview.main import save, _leaf
-from ete3.treeview import random_color
+
+import my_actions as ma
+
+
 from ete3.treeview.qt4_render import render
+
 from ete3 import Tree, TreeStyle
-
-from glue.core.subset import CategorySubsetState
-
-import time
+from ete3.treeview import random_color
 
 
-class _PanItem(QGraphicsRectItem):
-    def __init__(self, parent=None):
-        QGraphicsRectItem.__init__(self, 0, 0, 0, 0)
-        self.Color = QColor("blue")
 
-        if parent:
-            self.setParentItem(parent)
-        self.points = []
+def etime(f):
+    import time
+    def a_wrapper_accepting_arguments(*args, **kargs):
+        global TIME
+        t1 = time.time()
+        f(*args, **kargs)
+        print(time.time() - t1)
 
-    def add_point(self, p):
-        self.points.append(p)
+    return a_wrapper_accepting_arguments
 
-    def paint(self, p, option, widget):
 
-        p.setPen(self.Color)
-        p.setBrush(QBrush(Qt.NoBrush))
+class scrollenabled():
+    def __init__(self, on):
+        self.on = on
 
-        for pt in self.points:
-            print("drawing point", pt)
-            p.drawEllipse(pt, 10, 10)
+    def __enter__(self):
+        self.on.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.on.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
+    def __exit__(self, type, value, traceback):
+        self.on.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.on.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
 class _ZoomboxItem(QGraphicsRectItem):
     def __init__(self, parent=None):
@@ -104,6 +105,20 @@ class _ZoomboxItem(QGraphicsRectItem):
         )
 
 
+def get_hlbox(node, item):
+    if hasattr(item, 'highlightbox'):
+        return item.highlightbox
+    else:
+        hlbox = item.nodeRegion
+
+        if not node.is_leaf():
+            centery = item.center
+            hlbox.setTop(centery - 5)
+            hlbox.setBottom(centery + 5)
+
+        item.highlightbox = hlbox
+        return hlbox
+
 class _SelectorItem(QGraphicsLineItem):
     def __init__(self, parent=None):
         self.Color = QColor("blue")
@@ -117,9 +132,7 @@ class _SelectorItem(QGraphicsLineItem):
     def paint(self, p, option, widget):
         p.setPen(self.Color)
         p.setBrush(QBrush(Qt.NoBrush))
-        # p.drawRect(self.rect().x(),self.rect().y(),self.rect().width(),self.rect().height())
         p.drawLine(self.line())
-        # self.get_nodes_under_line()
 
     def get_nodes(self):
         return self.selected_cache
@@ -133,20 +146,15 @@ class _SelectorItem(QGraphicsLineItem):
         del self.selected_cache
         self.selected_cache = set()
 
-    def get_nodes_under_line(self):
+        
 
+    def get_nodes_under_line(self):
         n2i = self.scene().n2i
         selectednodes = set()
         for node, item in n2i.items():
 
-            hlbox = item.nodeRegion
+            hlbox = get_hlbox(node, item)
 
-            if not node.is_leaf():
-                centery = item.center
-                hlbox.setTop(centery - 5)
-                hlbox.setBottom(centery + 5)
-
-            item.highlightbox = hlbox
             R = item.mapToScene(hlbox).boundingRect()
 
             line1 = QLineF(R.topLeft(), R.bottomRight())
@@ -155,21 +163,12 @@ class _SelectorItem(QGraphicsLineItem):
             # WARNING, looks lkie intersect api is different for different types of QT...
             a = line1.intersect(self.line(), QPointF(0, 0))
             b = line2.intersect(self.line(), QPointF(0, 0))
-            # print('point1', a)
-            # print('point1', b)
 
             # https://doc.qt.io/qt-5/qlinef-obsolete.html#IntersectType-enum
             self.scene().view.unhighlight_node(node)
             if a == 1 or b == 1:
-                # print('collision!!!')
                 selectednodes.add(node)
-                # self.scene().view.highlight_node(node)
-            # else:
-            # self.scene().view.unhighlight_node(node)
 
-            # R.adjust(-60, -60, 60, 60)
-
-        # TODO move drawing to other place
         for node in self.selected_cache:
             self.scene().view.highlight_node(node)
 
@@ -185,23 +184,16 @@ class _SelectorItem(QGraphicsLineItem):
         return self._active
 
 
-def etime(f):
-    def a_wrapper_accepting_arguments(*args, **kargs):
-        global TIME
-        t1 = time.time()
-        f(*args, **kargs)
-        print(time.time() - t1)
-
-    return a_wrapper_accepting_arguments
-
-
 class _TreeView(QGraphicsView):
-    def __init__(self, session, data, func, *args):
-        self.session = session
+
+    def __init__(self, data, func, scene):
+        QGraphicsView.__init__(self, scene)
+
+        # tree data
         self.data = data
-        self.apply_subset_state = func
-        QGraphicsView.__init__(self, *args)
-        self.buffer_node = None
+        # callback function for selected nodes
+        self.subset_from_selection = func
+
         self.init_values()
 
         if USE_GL:
@@ -227,18 +219,16 @@ class _TreeView(QGraphicsView):
 
         self.mouseMode = "none"
 
+
     def init_values(self):
         master_item = self.scene().master_item
         self.n2hl = {}
-        # self.buffer_node = None
-        self.selector = _SelectorItem(master_item)
-        self.zoomrect = _ZoomboxItem(master_item)
-        self.pts = _PanItem(master_item)
+        self.selector = _SelectorItem(parent=master_item)
+        self.zoomrect = _ZoomboxItem(parent=master_item)
 
         self.andSelect = False
 
-        self.panPoint = None
-        self.panCenter = None
+        self.actionControllers  = set()
 
     def resizeEvent(self, e):
         QGraphicsView.resizeEvent(self, e)
@@ -268,15 +258,10 @@ class _TreeView(QGraphicsView):
             # don't rehightlight an already higlighted node
             return None
 
-        self.unhighlight_node(n)
-
         item = self.scene().n2i[n]
         hl = QGraphicsRectItem(item.content)
 
-        if hasattr(item, "highlightbox"):
-            hl.setRect(item.highlightbox)
-        else:
-            hl.setRect(item.nodeRegion)
+        hl.setRect(get_hlbox(n, item))
 
         hl.setPen(QColor(fg))
         hl.setBrush(QColor(bg))
@@ -346,6 +331,7 @@ class _TreeView(QGraphicsView):
 
         QGraphicsView.keyReleaseEvent(self, e)
 
+
     def keyPressEvent(self, e):
         key = e.key()
         control = e.modifiers() & Qt.ControlModifier
@@ -360,33 +346,19 @@ class _TreeView(QGraphicsView):
                 or key == Qt.Key_Return
                 and not self.selector.isActive()
             ):
+                #{A} refactor this into method in other file (probably state)
                 selectednodes = self.selector.get_nodes()
 
                 # make sure visual state is synced with what goes into glue
                 a = set([node for node, _ in self.n2hl.items()])
                 assert a == selectednodes
 
-                # self.data has tdata
-                data = self.data
+                self.subset_from_selection(selectednodes)
 
-                cid = data.tree_component_id
 
-                # this should be avoided, we are doing the opposite in the glue library code...
-                codeidxs = np.isin(data[cid], np.array([n.idx for n in selectednodes]))
-                codes = data[cid].codes[codeidxs]
-
-                subset = CategorySubsetState(cid, codes)
-
-                # mode = self.session.edit_subset_mode
-                # mode.update(data, subset)
-
-                self.apply_subset_state(subset)
-
-        # QGraphicsView.keyPressEvent(self, e)
+        #QGraphicsView.keyPressEvent(self, e)
 
     def mouseReleaseEvent(self, e):
-        self.panPoint = None
-        self.panCenter = None
 
         if self.mouseMode == "lineselect":
             self.selector.accumulate_selected()
@@ -398,13 +370,8 @@ class _TreeView(QGraphicsView):
             normd = rect.normalized()
             # {A}
 
-            self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-
-            self.fitInView(normd, Qt.KeepAspectRatioByExpanding)
-
-            self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            with scrollenabled(self):
+                self.fitInView(normd, Qt.KeepAspectRatioByExpanding)
 
             # self.ensureVisible(normd, 10, 10)
             # self.centerOn(normd.center())
@@ -412,25 +379,10 @@ class _TreeView(QGraphicsView):
             self.zoomrect.setActive(False)
             self.zoomrect.setVisible(False)
 
-        # QGraphicsView.mouseReleaseEvent(self, e)
+            
+        QGraphicsView.mouseReleaseEvent(self, e)
 
     def mousePressEvent(self, e):
-        if self.mouseMode == "pan":
-            pos = self.mapToScene(e.pos())
-
-            self.panPoint = pos
-
-            vp = self.mapToScene(self.viewport().rect()).boundingRect().center()
-            x, y = vp.x(), vp.y()
-
-            self.panCenter = vp
-        # scrollbars. You can toggle the scrollbar policies to always on or always off to prevent this (see horizontalScrollBarPolicy() and verticalScrollBarPolicy()).
-        # self.pts.add_point(self.panCenter)
-        # self.pts.add_point(self.panPoint)
-
-        # print('adding points', self.panCenter)
-        # print('adding points2', self.panPoint)
-
         if self.mouseMode == "lineselect":
             pos = self.mapToScene(e.pos())
             x, y = pos.x(), pos.y()
@@ -455,20 +407,9 @@ class _TreeView(QGraphicsView):
 
         # NOTE: if we want to add mouse click selection, we have to overwrite the mousePressEvent methods in
         #            node_gui_actions
-        # QGraphicsView.mousePressEvent(self, e)
+        QGraphicsView.mousePressEvent(self, e)
 
     def mouseMoveEvent(self, e):
-        if self.mouseMode == "pan":
-
-            if self.panCenter:
-                mouse = self.mapToScene(e.pos())
-                diff = mouse - self.panPoint
-
-                newcenter = self.panCenter - diff
-                print("center %s - diff %s" % (newcenter, diff))
-
-                self.centerOn(newcenter)
-
         if self.mouseMode == "lineselect":
 
             if self.selector.isActive():
@@ -486,4 +427,4 @@ class _TreeView(QGraphicsView):
                 h = curr_pos.y() - r.y()
                 self.zoomrect.setRect(r.x(), r.y(), w, h)
 
-        # QGraphicsView.mouseMoveEvent(self, e)
+        QGraphicsView.mouseMoveEvent(self, e)

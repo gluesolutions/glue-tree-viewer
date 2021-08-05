@@ -1,5 +1,29 @@
 # this file based on http://docs.glueviz.org/en/stable/customizing_guide/viewer.html
 
+import builtins
+import my_actions
+
+
+# import hack because I need to repalce a class imported by ete3
+old_import = builtins.__import__
+def temp_import(*args, **kwargs):
+    module = old_import(*args, **kwargs)
+
+    if args[0] == 'node_gui_actions':
+        module._NodeActions = my_actions.T_NodeActions
+    return module
+
+builtins.__import__ = temp_import
+
+from ete3.treeview.qt4_render import (
+    _TreeScene,
+    render,
+    get_tree_img_map,
+    init_tree_style,
+)
+
+builtins.__import__ = old_import
+    
 
 # -- VIEWER STATE CLASS
 from glue.viewers.common.state import ViewerState
@@ -10,12 +34,6 @@ from glue.viewers.common.tool import CheckableTool, Tool
 
 from collections import defaultdict
 
-from ete3.treeview.qt4_render import (
-    _TreeScene,
-    render,
-    get_tree_img_map,
-    init_tree_style,
-)
 from qt4_gui_modified import _TreeView
 
 import ete3
@@ -27,6 +45,10 @@ from glue.viewers.common.layer_artist import LayerArtist
 
 from glue.utils.colors import alpha_blend_colors
 from glue.utils.qt import mpl_to_qt_color
+from qtpy.QtCore import Qt
+
+import numpy as np
+from glue.core.subset import CategorySubsetState
 
 def full_equal(dfd1, dfd2):
     if dfd1 == dfd2:
@@ -54,37 +76,23 @@ class TreeLayerArtist(LayerArtist):
 
     _layer_state_cls = TreeLayerState
 
-    def __init__(self, fn, session, apply_subset_state, parent, *args, **kwargs):
+    def __init__(self, apply_subset_state, parent, *args, **kwargs):
         self.treeviewer = parent
         super(TreeLayerArtist, self).__init__(*args, **kwargs)
-        print("tree layer artist being initialzied")
-        self.setCentralWidget = fn
-        self.session = session
-        self.apply_subset_state = apply_subset_state
-
-        self.state.add_callback("fill", self._on_fill_checked)
 
     def clear(self):
-        print("clear1")
         self.treeviewer.redraw()
 
     def remove(self):
-        print("remove1")
+        pass
         #self.treeviewer.redraw()
 
     def redraw(self):
-        print("redraw1")
-        # self.scene.draw()
-        # self.view.init_values()
         self.treeviewer.redraw()
 
     def update(self):
         # this happens when the subset is changed, but also other places.
-        print("layer updated, redrawing")
         self.treeviewer.redraw()
-
-    def _on_fill_checked(self, *args):
-        print("onf ill checked", args)
 
 
 # -- QT special widgets
@@ -167,7 +175,8 @@ class TreeDataViewer(DataViewer):
     _subset_artist_cls = TreeLayerArtist
 
     _toolbar_cls = BasicToolbar
-    tools = ["tree:home", "tree:pan", "tree:rectzoom", "tree:lineselect"]
+    tools = ["tree:home", "tree:pan", "tree:rectzoom", "tree:lineselect",
+             "tree:pointselect"]
 
     # additional stuff for qt
 
@@ -176,10 +185,8 @@ class TreeDataViewer(DataViewer):
 
     def __init__(self, session, state=None, parent=None, widget=None):
         super(TreeDataViewer, self).__init__(session, state=state, parent=parent)
-        self.s = session
 
         # TODO move these to treeviewerstate?
-        print('cache born, reset to epmty')
         self.CACHED_title2color = defaultdict((lambda: []))
 
         assert isinstance(self.state, ViewerState)
@@ -274,14 +281,27 @@ class TreeDataViewer(DataViewer):
     def get_layer_artist(self, cls, layer=None, layer_state=None):
         assert cls == TreeLayerArtist
         return cls(
-            self.setCentralWidget,
-            self.s,
             self.apply_subset_state,
             self,
             self.state,
             layer=layer,
             layer_state=layer_state,
         )
+
+    def subset_from_selection(self, selectednodes):
+        data = self.data
+
+        cid = data.tree_component_id
+
+        # this should be avoided, we are doing the opposite in the glue library code...
+        codeidxs = np.isin(data[cid], np.array([n.idx for n in selectednodes]))
+        codes = data[cid].codes[codeidxs]
+
+        subset = CategorySubsetState(cid, codes)
+
+        # mode.update(data, subset)
+
+        self.apply_subset_state(subset)
 
     def init_treedrawing(self, data):
         self.data = data
@@ -310,7 +330,7 @@ class TreeDataViewer(DataViewer):
 
         self.scene.GUI = self
         self.view = _TreeView(
-            self.session, self.data, self.apply_subset_state, self.scene
+            self.data, self.subset_from_selection, self.scene
         )
         self.scene.view = self.view
         self.node_properties = None
@@ -325,16 +345,15 @@ class TreeDataViewer(DataViewer):
 
         return True
 
+    
+
     def redraw(self):
-        print('redrawing')
 
         self.get_title2color()
 
         if full_equal(self.CACHED_title2color, self.title2color):
-            print("cache: drawing information not changed, not redrawing")
             return
 
-        print("cache: ACTUALLY REDRAWING !!!!")
         self.CACHED_title2color = self.title2color
 
         for node in self.data.tdata.traverse():
@@ -353,25 +372,9 @@ class TreeDataViewer(DataViewer):
             node.set_style(st)
 
         self.scene.draw()
-
-        # TODO: can we get rid of init_values here?
         self.view.init_values()
 
-    def zoomOut(self):
-        from qtpy.QtCore import Qt
-
-        # from https://github.com/etetoolkit/ete/blob/1f587a315f3c61140e3bdbe697e3e86eda6d2eca/ete3/treeview/qt4_gui.py#L231
-        self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
-
-    def zoomHome(self):
-        from qtpy import QtCore
-        from qtpy.QtCore import Qt
-
-        # from https://github.com/etetoolkit/ete/blob/1f587a315f3c61140e3bdbe697e3e86eda6d2eca/ete3/treeview/qt4_gui.py#L231
-        self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
-
-    def remove(self):
-        print("remove2")
+        # TODO: can we get rid of init_values here?
 
 
 @viewer_tool
@@ -387,11 +390,7 @@ class HomeButton(Tool):
         super(HomeButton, self).__init__(viewer)
 
     def activate(self):
-        self.viewer.zoomHome()
-
-    def close(self):
-        pass
-
+        self.viewer.view.fitInView(self.viewer.scene.sceneRect(), Qt.KeepAspectRatio)
 
 DEFUALT_MOUSE_MODE = "none"
 
@@ -423,6 +422,24 @@ class ZoomOut(CheckableTool):
     def close(self):
         pass
 
+@viewer_tool
+class PointSelect(CheckableTool):
+
+    icon = "glue_point"
+    tool_id = "tree:pointselect"
+    action_text = "select single nodes at a time"
+    tool_tip = "click on a node to select"
+    shortcut = "K"
+
+    def __init__(self, viewer):
+        super(CheckableTool, self).__init__(viewer)
+
+    def activate(self):
+        # the rest of the logic is handled in action controllers in my_actions.py
+        self.viewer.view.mouseMode = "pointerselect"
+
+    def deactivate(self):
+        self.viewer.view.mouseMode = DEFUALT_MOUSE_MODE
 
 @viewer_tool
 class LineSelect(CheckableTool):
@@ -451,7 +468,6 @@ class LineSelect(CheckableTool):
     def close(self):
         pass
 
-
 @viewer_tool
 class PanTool(CheckableTool):
 
@@ -465,10 +481,10 @@ class PanTool(CheckableTool):
         super(PanTool, self).__init__(viewer)
 
     def activate(self):
-        self.viewer.view.mouseMode = "pan"
+        self.viewer.view.setDragMode(self.viewer.view.ScrollHandDrag)
 
     def deactivate(self):
-        self.viewer.view.mouseMode = DEFUALT_MOUSE_MODE
+        self.viewer.view.setDragMode(self.viewer.view.NoDrag)
 
     def close(self):
         pass
@@ -478,28 +494,3 @@ class PanTool(CheckableTool):
 from glue.config import qt_client
 
 qt_client.add(TreeDataViewer)
-
-
-# @menubar_plugin("link data on key")
-# def my_plugin(sesssion, data_collection):
-# print('buttin')
-# return
-
-
-# BUG: we can't save the session
-
-# how to send links from tree viewer
-
-# PERFORMANCE:  only do collision checks when the selection line changes, not every frame.
-
-# TODO
-# press enter to submit subset
-# https://github.com/glue-viz/glue/blob/241edb32ab6f4a82adf02ef3711c16342fd214ed/glue/viewers/table/qt/data_viewer.py#L251
-# display subsets on tree
-
-# TODO use https://github.com/glue-viz/glue/blob/241edb32ab6f4a82adf02ef3711c16342fd214ed/glue/utils/array.py#L497 this class to represent trees?
-
-# TODO make it listen to hub messages nicely
-# TODO click AND drag options
-
-# BUG sometimes it gets completely red and wont delete, even after I close it(i think its a static variable being changed, probably a root node getting selected)
