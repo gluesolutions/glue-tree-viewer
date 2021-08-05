@@ -82,7 +82,7 @@ class _PanItem(QGraphicsRectItem):
         p.setBrush(QBrush(Qt.NoBrush))
 
         for pt in self.points:
-            print('drawing point', pt)
+            print("drawing point", pt)
             p.drawEllipse(pt, 10, 10)
 
 
@@ -273,7 +273,7 @@ class _TreeView(QGraphicsView):
         item = self.scene().n2i[n]
         hl = QGraphicsRectItem(item.content)
 
-        if hasattr(item, 'highlightbox'):
+        if hasattr(item, "highlightbox"):
             hl.setRect(item.highlightbox)
         else:
             hl.setRect(item.nodeRegion)
@@ -372,14 +372,8 @@ class _TreeView(QGraphicsView):
                 cid = data.tree_component_id
 
                 # this should be avoided, we are doing the opposite in the glue library code...
-                #{A} question: if this is changed to int, will the dendrogram linking work?
-                #              if yes: work on making int categories properly
-                #              if no: ?
-                codeidxs = np.isin(
-                    data[cid], np.array([n.idx for n in selectednodes])
-                )
+                codeidxs = np.isin(data[cid], np.array([n.idx for n in selectednodes]))
                 codes = data[cid].codes[codeidxs]
-                print("codes", codes)
 
                 subset = CategorySubsetState(cid, codes)
 
@@ -402,19 +396,18 @@ class _TreeView(QGraphicsView):
             # convert rect to have positive coordinates
             rect = self.zoomrect.rect()
             normd = rect.normalized()
-            #{A}
+            # {A}
 
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-            
+
             self.fitInView(normd, Qt.KeepAspectRatioByExpanding)
 
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
-
-            #self.ensureVisible(normd, 10, 10)
-            #self.centerOn(normd.center())
+            # self.ensureVisible(normd, 10, 10)
+            # self.centerOn(normd.center())
 
             self.zoomrect.setActive(False)
             self.zoomrect.setVisible(False)
@@ -428,15 +421,15 @@ class _TreeView(QGraphicsView):
             self.panPoint = pos
 
             vp = self.mapToScene(self.viewport().rect()).boundingRect().center()
-            x,y = vp.x(), vp.y()
+            x, y = vp.x(), vp.y()
 
             self.panCenter = vp
-# scrollbars. You can toggle the scrollbar policies to always on or always off to prevent this (see horizontalScrollBarPolicy() and verticalScrollBarPolicy()).
-            #self.pts.add_point(self.panCenter)
-            #self.pts.add_point(self.panPoint)
+        # scrollbars. You can toggle the scrollbar policies to always on or always off to prevent this (see horizontalScrollBarPolicy() and verticalScrollBarPolicy()).
+        # self.pts.add_point(self.panCenter)
+        # self.pts.add_point(self.panPoint)
 
-            #print('adding points', self.panCenter)
-            #print('adding points2', self.panPoint)
+        # print('adding points', self.panCenter)
+        # print('adding points2', self.panPoint)
 
         if self.mouseMode == "lineselect":
             pos = self.mapToScene(e.pos())
@@ -460,7 +453,6 @@ class _TreeView(QGraphicsView):
             self.zoomrect.setActive(True)
             self.zoomrect.setVisible(True)
 
-
         # NOTE: if we want to add mouse click selection, we have to overwrite the mousePressEvent methods in
         #            node_gui_actions
         # QGraphicsView.mousePressEvent(self, e)
@@ -473,7 +465,7 @@ class _TreeView(QGraphicsView):
                 diff = mouse - self.panPoint
 
                 newcenter = self.panCenter - diff
-                print('center %s - diff %s' % (newcenter, diff))
+                print("center %s - diff %s" % (newcenter, diff))
 
                 self.centerOn(newcenter)
 

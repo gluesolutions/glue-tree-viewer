@@ -25,9 +25,8 @@ from glue.viewers.common.state import LayerState
 
 from glue.viewers.common.layer_artist import LayerArtist
 
-import cProfile
-import pstats
-
+from glue.utils.colors import alpha_blend_colors
+from glue.utils.qt import mpl_to_qt_color
 
 def full_equal(dfd1, dfd2):
     if dfd1 == dfd2:
@@ -181,7 +180,7 @@ class TreeDataViewer(DataViewer):
 
         # TODO move these to treeviewerstate?
         print('cache born, reset to epmty')
-        self.CACHED_title2color = defaultdict((lambda: "#FFFFFF"))
+        self.CACHED_title2color = defaultdict((lambda: []))
 
         assert isinstance(self.state, ViewerState)
         self.state.add_global_callback(self._on_layers_changed)
@@ -233,7 +232,7 @@ class TreeDataViewer(DataViewer):
         return super(TreeDataViewer, self).add_data(data)
 
     def get_title2color(self):
-        self.title2color = defaultdict((lambda: "#FFFFFF"))
+        self.title2color = defaultdict((lambda: []))
 
         for layer_artist in self.layers:
             print("layerstate", layer_artist)
@@ -254,18 +253,18 @@ class TreeDataViewer(DataViewer):
                         layer_artist.disable_incompatible_subset()
                 else:
                     for name in goodnames:
-                        # TODO add color blending
                         if layer_artist.visible:
-                            self.title2color[name] = layer.style.color
+                            self.title2color[name].append(layer.style.color)
                         else:
-                            self.title2color[name] = "#FFFFFF"
+                            colorlist = self.title2color[name]
+                            if layer.style.color in colorlist:
+                                # this modifies the dict..
+                                colorlist.remove(layer.style.color)
 
             else:
                 assert hasattr(layer, "tdata")
 
     def _on_layers_changed(self, *args, **kwargs):
-        pr = cProfile.Profile()
-        pr.enable()
         # make sure it only tries to draw when it
         if hasattr(self, "scene"):
             self.redraw()
@@ -341,8 +340,16 @@ class TreeDataViewer(DataViewer):
         for node in self.data.tdata.traverse():
             st = self.default_style()
             nn = node.idx
-            color = self.title2color[nn]
-            st["bgcolor"] = color
+            colors = self.title2color[nn]
+
+            if colors:
+                # performance: we can skip the colors conversion if only one color
+                st["bgcolor"] = mpl_to_qt_color(
+                    alpha_blend_colors(colors, additional_alpha=0.5)
+                ).name()
+            else:
+                st["bgcolor"] = "#FFFFFF"
+
             node.set_style(st)
 
         self.scene.draw()
