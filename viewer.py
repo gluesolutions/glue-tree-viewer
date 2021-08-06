@@ -125,6 +125,8 @@ NODE_TYPES = OrderedDict(
 
 SHOW_TEXT = OrderedDict([(True, "Yes"), (False, "No")])
 
+INCLUDE_CHILDREN = OrderedDict([(True, "Yes"), (False, "No")])
+
 
 def layout(node):
     node.children.sort(key=lambda n: n.dist + n.get_farthest_leaf()[1], reverse=True)
@@ -135,6 +137,7 @@ class TreeViewerState(ViewerState):
         docstring="the node type to display on the tree viewer"
     )
     showtext_att = SelectionCallbackProperty(docstring="to show the text on the tree")
+    select_children_att = SelectionCallbackProperty(docstring="to include children in selections")
 
     def __init__(self, *args, **kwargs):
         super(TreeViewerState, self).__init__(*args, **kwargs)
@@ -144,6 +147,9 @@ class TreeViewerState(ViewerState):
 
         TreeViewerState.showtext_att.set_choices(self, list(SHOW_TEXT))
         TreeViewerState.showtext_att.set_display_func(self, SHOW_TEXT.get)
+
+        TreeViewerState.select_children_att.set_choices(self, list(INCLUDE_CHILDREN))
+        TreeViewerState.select_children_att.set_display_func(self, INCLUDE_CHILDREN.get)
 
 
 from glue.utils.qt import load_ui
@@ -195,6 +201,7 @@ class TreeDataViewer(DataViewer):
 
         self.state.add_callback("node_att", self._on_node_change)
         self.state.add_callback("showtext_att", self._on_showtext_change)
+        self.state.add_callback("select_children_att", self._on_select_children_change)
 
         self.default_style = lambda: ete3.NodeStyle()
         self.tree_style = ete3.TreeStyle()
@@ -203,9 +210,9 @@ class TreeDataViewer(DataViewer):
         self._on_layers_changed(None)
 
 
+
     def _on_node_change(self, newval, **kwargs):
-        print("on node change", newval, kwargs)
-        # QUESTION are there just a billion nodestyle classes clogging things up?
+
         def newstylefn():
             st = ete3.NodeStyle()
             st["shape"] = newval
@@ -213,14 +220,16 @@ class TreeDataViewer(DataViewer):
 
         self.default_style = newstylefn
         for node in self.data.tdata.traverse():
-            # PERFORMANCE this creates tons of garbage
             node.set_style(newstylefn())
-            # TODO will not last after layers update
-        self.redraw(force=True)
+
+        self.hard_redraw()
 
     def _on_showtext_change(self, newval, **kwargs):
         self.tree_style.show_leaf_name = newval
-        self.redraw(force=True)
+        self.hard_redraw()
+
+    def _on_select_children_change(self, newval, **kwargs):
+        self.view.select_children = newval
 
     def add_data(self, data):
         assert hasattr(data, "tdata")
@@ -333,6 +342,15 @@ class TreeDataViewer(DataViewer):
         return True
 
     
+    def hard_redraw(self):
+
+        for node in self.data.tdata.traverse():
+            node.set_style(self.default_style())
+
+        self.scene.draw()
+        self.view.init_values()
+
+        self.redraw(force=True)
 
     def redraw(self, force=False):
 
@@ -344,22 +362,19 @@ class TreeDataViewer(DataViewer):
         self.CACHED_title2color = self.title2color
 
         for node in self.data.tdata.traverse():
-            st = self.default_style()
+
             nn = node.idx
             colors = self.title2color[nn]
 
             if colors:
-                # performance: we can skip the colors conversion if only one color
-                st["bgcolor"] = mpl_to_qt_color(
-                    alpha_blend_colors(colors, additional_alpha=0.5)
-                ).name()
+                color = mpl_to_qt_color(alpha_blend_colors(colors, additional_alpha=0.5))
+
+                self.view.color_node(node, color)
             else:
-                st["bgcolor"] = "#FFFFFF"
+                # TODO problem, this will mess with temporary higlighting
+                self.view.uncolor_node(node)
+                
 
-            node.set_style(st)
-
-        self.scene.draw()
-        self.view.init_values()
 
 
 @viewer_tool

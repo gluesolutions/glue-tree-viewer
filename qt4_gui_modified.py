@@ -63,9 +63,9 @@ from ete3 import Tree, TreeStyle
 from ete3.treeview import random_color
 
 
-
 def etime(f):
     import time
+
     def a_wrapper_accepting_arguments(*args, **kargs):
         global TIME
         t1 = time.time()
@@ -75,7 +75,7 @@ def etime(f):
     return a_wrapper_accepting_arguments
 
 
-class scrollenabled():
+class scrollenabled:
     def __init__(self, on):
         self.on = on
 
@@ -86,6 +86,7 @@ class scrollenabled():
     def __exit__(self, type, value, traceback):
         self.on.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.on.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
 
 class _ZoomboxItem(QGraphicsRectItem):
     def __init__(self, parent=None):
@@ -106,7 +107,7 @@ class _ZoomboxItem(QGraphicsRectItem):
 
 
 def get_hlbox(node, item):
-    if hasattr(item, 'highlightbox'):
+    if hasattr(item, "highlightbox"):
         return item.highlightbox
     else:
         hlbox = item.nodeRegion
@@ -118,6 +119,7 @@ def get_hlbox(node, item):
 
         item.highlightbox = hlbox
         return hlbox
+
 
 class _SelectorItem(QGraphicsLineItem):
     def __init__(self, parent=None):
@@ -145,8 +147,6 @@ class _SelectorItem(QGraphicsLineItem):
 
         del self.selected_cache
         self.selected_cache = set()
-
-        
 
     def get_nodes_under_line(self):
         n2i = self.scene().n2i
@@ -185,7 +185,6 @@ class _SelectorItem(QGraphicsLineItem):
 
 
 class _TreeView(QGraphicsView):
-
     def __init__(self, data, func, scene):
         QGraphicsView.__init__(self, scene)
 
@@ -218,17 +217,18 @@ class _TreeView(QGraphicsView):
         # self.scene().setBspTreeDepth(24)
 
         self.mouseMode = "none"
-
+        self.select_children = True
 
     def init_values(self):
         master_item = self.scene().master_item
         self.n2hl = {}
+        self.n2c = {}  # TODO make sure to redraw() after hard_redraw()
         self.selector = _SelectorItem(parent=master_item)
         self.zoomrect = _ZoomboxItem(parent=master_item)
 
         self.andSelect = False
 
-        self.actionControllers  = set()
+        self.actionControllers = set()
 
     def resizeEvent(self, e):
         QGraphicsView.resizeEvent(self, e)
@@ -252,29 +252,66 @@ class _TreeView(QGraphicsView):
         else:
             self.scale(xfactor, yfactor)
 
-    def highlight_node(self, n, fullRegion=False, fg="red", bg="gray", permanent=False):
+    def color_node(self, node, color):
+
+        item = self.scene().n2i[node]
+
+        hl = self.n2c[node] if node in self.n2c else QGraphicsRectItem(item.content)
+
+        hl.setRect(get_hlbox(node, item))
+
+        hl.setPen(QColor(color))
+        hl.setBrush(QColor(color))
+        hl.setOpacity(0.5)
+
+        # save info in Scene
+        self.n2c[node] = hl
+
+    def uncolor_node(self, n):
+        if n in self.n2c:
+            item = self.scene().n2i[n]
+            self.scene().removeItem(self.n2c[n])
+            del self.n2c[n]
+
+    def subset_from_hl(self):
+        selectednodes = self.n2hl.keys()
+        self.subset_from_selection(selectednodes)
+
+    def highlight_node(self, n, fg="red", bg="gray"):
+
 
         if n in self.n2hl:
             # don't rehightlight an already higlighted node
             return None
 
         item = self.scene().n2i[n]
+
         hl = QGraphicsRectItem(item.content)
 
         hl.setRect(get_hlbox(n, item))
 
         hl.setPen(QColor(fg))
         hl.setBrush(QColor(bg))
-        hl.setOpacity(0.2)
+        hl.setOpacity(0.4)
 
         # save info in Scene
         self.n2hl[n] = hl
 
-    def unhighlight_node(self, n, reset=False):
+        # recurse if has children
+        if self.select_children:
+            for child in n.children:
+                self.highlight_node(child)
+
+    def unhighlight_node(self, n):
         if n in self.n2hl:
             item = self.scene().n2i[n]
             self.scene().removeItem(self.n2hl[n])
             del self.n2hl[n]
+
+            # maybe move this out of check?
+            if self.select_children:
+                for child in n.children:
+                    self.unhighlight_node(child)
 
     def unhighlight_all(self):
         for n in self.n2hl:
@@ -331,7 +368,6 @@ class _TreeView(QGraphicsView):
 
         QGraphicsView.keyReleaseEvent(self, e)
 
-
     def keyPressEvent(self, e):
         key = e.key()
         control = e.modifiers() & Qt.ControlModifier
@@ -346,17 +382,19 @@ class _TreeView(QGraphicsView):
                 or key == Qt.Key_Return
                 and not self.selector.isActive()
             ):
-                #{A} refactor this into method in other file (probably state)
-                selectednodes = self.selector.get_nodes()
+                # {A} refactor this into method in other file (probably state)
+                #selectednodes = self.selector.get_nodes()
 
                 # make sure visual state is synced with what goes into glue
-                a = set([node for node, _ in self.n2hl.items()])
-                assert a == selectednodes
+                #a = set([node for node, _ in self.n2hl.items()])
+                #assert a == selectednodes
 
-                self.subset_from_selection(selectednodes)
+                self.subset_from_hl()
+                self.unhighlight_all()
 
 
-        #QGraphicsView.keyPressEvent(self, e)
+
+        # QGraphicsView.keyPressEvent(self, e)
 
     def mouseReleaseEvent(self, e):
 
@@ -379,7 +417,6 @@ class _TreeView(QGraphicsView):
             self.zoomrect.setActive(False)
             self.zoomrect.setVisible(False)
 
-            
         QGraphicsView.mouseReleaseEvent(self, e)
 
     def mousePressEvent(self, e):

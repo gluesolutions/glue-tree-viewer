@@ -36,7 +36,7 @@ class T_NodeActions(object):
             self.scene().view.mouseMode == "pointerselect"
             and e.button() == Qt.LeftButton
         ):
-            self.scene().view.subset_from_selection([self.node])
+            self.scene().view.subset_from_hl()
 
     def hoverEnterEvent(self, e):
         if self.scene().view.mouseMode == "pointerselect":
@@ -47,11 +47,10 @@ class T_NodeActions(object):
         if self.node and self._enabled:
             self.scene().view.highlight_node(self.node)
 
-
     def hoverLeaveEvent(self, e):
         if self.node and self._enabled:
             if self.node in self.scene().view.n2hl:
-                self.scene().view.unhighlight_node(self.node, reset=False)
+                self.scene().view.unhighlight_node(self.node)
 
     def mousePressEvent(self, e):
         if self._enabled:
