@@ -183,7 +183,7 @@ class TreeDataViewer(DataViewer):
 
     _toolbar_cls = BasicToolbar
     tools = ["tree:home", "tree:pan", "tree:rectzoom", "tree:lineselect",
-             "tree:pointselect"]
+             "tree:pointselect", "tree:animate"]
 
     # additional stuff for qt
 
@@ -373,7 +373,7 @@ class TreeDataViewer(DataViewer):
             else:
                 # TODO problem, this will mess with temporary higlighting
                 self.view.uncolor_node(node)
-                
+
 
 
 
@@ -440,6 +440,26 @@ class PointSelect(CheckableTool):
 
     def deactivate(self):
         self.viewer.view.mouseMode = DEFUALT_MOUSE_MODE
+
+    def close(self):
+        pass
+
+
+@viewer_tool
+class AnimationTool(Tool):
+
+    icon = "playback_forw"
+    tool_id = "tree:animate"
+    action_text = "anmiate"
+    tool_tip = "click on a node to start animation"
+    shortcut = "A"
+
+    def __init__(self, viewer):
+        super(AnimationTool, self).__init__(viewer)
+
+    def activate(self):
+        # the rest of the logic is handled in action controllers in my_actions.py
+        self.viewer.view.animate()
 
     def close(self):
         pass

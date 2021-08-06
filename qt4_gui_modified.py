@@ -465,3 +465,38 @@ class _TreeView(QGraphicsView):
                 self.zoomrect.setRect(r.x(), r.y(), w, h)
 
         QGraphicsView.mouseMoveEvent(self, e)
+
+    def timerEvent(self, e):
+        self.subset_from_selection(list_to_childlist(self.nextSelection))
+
+        q = []
+        for node in self.nextSelection:
+            q.extend(node.children)
+
+        print('next selection', q)
+
+        self.nextSelection = q
+
+        if not q:
+            self.killTimer(self.timerid)
+
+
+
+    def animate(self):
+        self.nextSelection = [self.data.tdata]
+        self.timerid = self.startTimer(100)
+
+def childlist(node):
+    if hasattr(node, 'cl'):
+        return node.cl
+    else:
+        s = set([node])
+        s |= list_to_childlist(node.children)
+        node.cl = s
+        return s
+    
+def list_to_childlist(nodes):
+    s = set()
+    for node in nodes:
+        s |= childlist(node)
+    return s
