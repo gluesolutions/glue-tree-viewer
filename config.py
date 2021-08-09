@@ -14,6 +14,51 @@ from glue.core.link_helpers import LinkCollection
 from glue.core.data_factories.helpers import data_label
 
 
+def find_type(string):
+    if string == '':
+        return None
+
+    if string.isnumeric():
+        return int
+
+    try:
+        float(string)
+        return float
+    except ValueError:
+        return str
+    
+
+def determine_format(fname):
+    # formats described here
+    # http://etetoolkit.org/docs/latest/tutorial/tutorial_trees.html#reading-and-writing-newick-trees
+
+    # default to format=1, unless file has support values instead of internal
+    # node names.
+
+    t = ete3.Tree(fname, format=1)
+    leaf_types = set(find_type(n.name) for n in t.traverse() if n.is_leaf())
+    print('leaf types', leaf_types)
+
+    parent_types = set(find_type(n.name) for n in t.traverse() if not n.is_leaf())
+    print('parent types', parent_types)
+
+    if len(leaf_types) != 1:
+        # maybe revert to just str in this case?
+        raise Exception('could not load tree, leaves are not homogenous types')
+
+    if None in parent_types:
+        parent_types.remove(None)
+
+    if leaf_types != parent_types and parent_types == set([float]):
+        # we have detected structure values, format 0 is correct
+        return 0
+    else:
+        # no structures detected, use 1 (internal node names)
+        return 1
+
+
+        
+
 # linking info
 # http://docs.glueviz.org/en/stable/developer_guide/linking.html
 def tree_process(fname, is_string=False):
@@ -26,9 +71,7 @@ def tree_process(fname, is_string=False):
     else:
         result.label = "%s [tree data]" % data_label(fname)
 
-    # based on http://etetoolkit.org/docs/latest/tutorial/tutorial_trees.html#reading-and-writing-newick-trees
-    # you probably don't want 0, because support values are strange
-    tree = ete3.Tree(fname, format=1)
+    tree = ete3.Tree(fname, format=determine_format(fname))
     result.tdata = tree
 
     result.tree_component_id = "tree nodes %s" % result.uuid

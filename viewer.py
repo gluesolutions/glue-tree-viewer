@@ -355,7 +355,6 @@ class TreeDataViewer(DataViewer):
 
         if not force and full_equal(self.CACHED_title2color, self.title2color):
             return
-        print('redrawing')
 
         self.CACHED_title2color = self.title2color
 
