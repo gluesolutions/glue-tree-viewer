@@ -256,13 +256,15 @@ class _TreeView(QGraphicsView):
 
         item = self.scene().n2i[node]
 
-        hl = self.n2c[node] if node in self.n2c else QGraphicsRectItem(item.content)
+        hl = self.n2c[node] if (node in self.n2c) else QGraphicsRectItem(item.content)
 
         hl.setRect(get_hlbox(node, item))
 
-        hl.setPen(QColor(color))
+        pen = QPen(color)
+        pen.setJoinStyle(Qt.MiterJoin)
+        hl.setPen(pen)
         hl.setBrush(QColor(color))
-        hl.setOpacity(0.5)
+        hl.setOpacity(1.0)
 
         # save info in Scene
         self.n2c[node] = hl

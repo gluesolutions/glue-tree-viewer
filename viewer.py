@@ -289,13 +289,10 @@ class TreeDataViewer(DataViewer):
 
         cid = data.tree_component_id
 
-        # this should be avoided, we are doing the opposite in the glue library code...
         codeidxs = np.isin(data[cid], np.array([n.idx for n in selectednodes]))
         codes = data[cid].codes[codeidxs]
 
         subset = CategorySubsetState(cid, codes)
-
-        # mode.update(data, subset)
 
         self.apply_subset_state(subset)
 
@@ -358,6 +355,7 @@ class TreeDataViewer(DataViewer):
 
         if not force and full_equal(self.CACHED_title2color, self.title2color):
             return
+        print('redrawing')
 
         self.CACHED_title2color = self.title2color
 
@@ -368,6 +366,10 @@ class TreeDataViewer(DataViewer):
 
             if colors:
                 color = mpl_to_qt_color(alpha_blend_colors(colors, additional_alpha=0.5))
+                # print(color.getRgbF())
+
+                if not self.tree_style.show_leaf_name:
+                    color.setAlpha(255)
 
                 self.view.color_node(node, color)
             else:

@@ -11,6 +11,7 @@ from glue import qglue
 from glue.core.data_factories.helpers import has_extension
 from glue.config import data_factory, link_function, link_helper
 from glue.core.link_helpers import LinkCollection
+from glue.core.data_factories.helpers import data_label
 
 
 # linking info
@@ -23,7 +24,7 @@ def tree_process(fname, is_string=False):
     if is_string:
         result.label = "tree data from dendrogram"  # TODO clean this up
     else:
-        result.label = "tree data[%s]" % os.path.basename(fname)
+        result.label = "%s [tree data]" % data_label(fname)
 
     # based on http://etetoolkit.org/docs/latest/tutorial/tutorial_trees.html#reading-and-writing-newick-trees
     # you probably don't want 0, because support values are strange
@@ -58,20 +59,25 @@ def read_newick(fname):
     # TODO how to give user option to choose format?
     return tree_process(fname)
 
+import glue.plugins.dendro_viewer.data_factory as df
 
-@data_factory("Tommy Dendogram Viewer")
+
+@data_factory("Tree Dendogram", identifier=df.is_dendro, priority=1001)
 def read_dendro(fname):
     def to_newick_str(dg):
         return "(" + ",".join(x.newick for x in dg.trunk) + ");"
 
     from astrodendro import Dendrogram
 
+    label = data_label(fname)
+
     dg = Dendrogram.load_from(fname)
 
     tree = tree_process(to_newick_str(dg), is_string=True)
+    tree.label = "{} [dendrogram]".format(label)
 
     im = Data(
-        intensity=dg.data, structure=dg.index_map, label="{} dendrogram".format(fname)
+        intensity=dg.data, structure=dg.index_map, label="{} [data]".format(label)
     )
 
     im.join_on_key(tree, "structure", tree.tree_component_id)
