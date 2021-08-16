@@ -127,6 +127,8 @@ SHOW_TEXT = OrderedDict([(True, "Yes"), (False, "No")])
 
 INCLUDE_CHILDREN = OrderedDict([(True, "Yes"), (False, "No")])
 
+ORIENTATION = OrderedDict([(0, "Left to Right"), (270, "Top to Bottom")])
+
 
 def layout(node):
     node.children.sort(key=lambda n: n.dist + n.get_farthest_leaf()[1], reverse=True)
@@ -139,8 +141,9 @@ class TreeViewerState(ViewerState):
     showtext_att = SelectionCallbackProperty(docstring="to show the text on the tree")
     select_children_att = SelectionCallbackProperty(docstring="to include children in selections")
 
+    orientation_att = SelectionCallbackProperty(docstring="how the tree is rotated")
+
     def __init__(self, *args, **kwargs):
-        super(TreeViewerState, self).__init__(*args, **kwargs)
 
         TreeViewerState.node_att.set_choices(self, list(NODE_TYPES))
         TreeViewerState.node_att.set_display_func(self, NODE_TYPES.get)
@@ -150,6 +153,13 @@ class TreeViewerState(ViewerState):
 
         TreeViewerState.select_children_att.set_choices(self, list(INCLUDE_CHILDREN))
         TreeViewerState.select_children_att.set_display_func(self, INCLUDE_CHILDREN.get)
+
+        TreeViewerState.orientation_att.set_choices(self, list(ORIENTATION))
+        TreeViewerState.orientation_att.set_display_func(self, ORIENTATION.get)
+
+        # weird that this goes below, but I saw it in some examples
+
+        super(TreeViewerState, self).__init__(*args, **kwargs)
 
 
 from glue.utils.qt import load_ui
@@ -202,6 +212,7 @@ class TreeDataViewer(DataViewer):
         self.state.add_callback("node_att", self._on_node_change)
         self.state.add_callback("showtext_att", self._on_showtext_change)
         self.state.add_callback("select_children_att", self._on_select_children_change)
+        self.state.add_callback("orientation_att", self._on_orientation_change)
 
         self.default_style = lambda: ete3.NodeStyle()
         self.tree_style = ete3.TreeStyle()
@@ -230,6 +241,10 @@ class TreeDataViewer(DataViewer):
 
     def _on_select_children_change(self, newval, **kwargs):
         self.view.select_children = newval
+
+    def _on_orientation_change(self, newval, **kwargs):
+        self.tree_style.rotation = newval
+        self.hard_redraw()
 
     def add_data(self, data):
         assert hasattr(data, "tdata")

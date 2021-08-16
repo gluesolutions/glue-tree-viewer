@@ -37,10 +37,8 @@ def determine_format(fname):
 
     t = ete3.Tree(fname, format=1)
     leaf_types = set(find_type(n.name) for n in t.traverse() if n.is_leaf())
-    print('leaf types', leaf_types)
 
     parent_types = set(find_type(n.name) for n in t.traverse() if not n.is_leaf())
-    print('parent types', parent_types)
 
     if len(leaf_types) != 1:
         # maybe revert to just str in this case?
@@ -61,17 +59,15 @@ def determine_format(fname):
 
 # linking info
 # http://docs.glueviz.org/en/stable/developer_guide/linking.html
-def tree_process(fname, is_string=False):
+def tree_process(newickstr, title):
     import os
 
+    #result = Data(newickstr=[newickstr])
     result = Data()
 
-    if is_string:
-        result.label = "tree data from dendrogram"  # TODO clean this up
-    else:
-        result.label = "%s [tree data]" % data_label(fname)
+    result.label = "%s [tree data]" % title
 
-    tree = ete3.Tree(fname, format=determine_format(fname))
+    tree = ete3.Tree(newickstr, format=determine_format(newickstr))
     result.tdata = tree
 
     result.tree_component_id = "tree nodes %s" % result.uuid
@@ -89,9 +85,6 @@ def tree_process(fname, is_string=False):
         else:
             node.idx = node.name
 
-    # TODO if they are all ints, make them ints
-    print(nodes)
-
     result.add_component(CategoricalComponent(nodes), result.tree_component_id)
 
     return result
@@ -100,7 +93,9 @@ def tree_process(fname, is_string=False):
 @data_factory("Newick tree loader", identifier=has_extension("tre nw"), priority=1000)
 def read_newick(fname):
     # TODO how to give user option to choose format?
-    return tree_process(fname)
+    with open(fname) as f:
+        contents = f.read()
+        return tree_process(contents, data_label(fname))
 
 import glue.plugins.dendro_viewer.data_factory as df
 
@@ -116,8 +111,7 @@ def read_dendro(fname):
 
     dg = Dendrogram.load_from(fname)
 
-    tree = tree_process(to_newick_str(dg), is_string=True)
-    tree.label = "{} [dendrogram]".format(label)
+    tree = tree_process(to_newick_str(dg), label)
 
     im = Data(
         intensity=dg.data, structure=dg.index_map, label="{} [data]".format(label)
