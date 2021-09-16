@@ -6,7 +6,7 @@ from glue.core.data import BaseCartesianData, Data
 from glue.utils import view_shape
 
 import ete3
-import viewer
+#from .viewer import TreeLayerState #Do we need this?
 from glue import qglue
 from glue.core.data_factories.helpers import has_extension
 from glue.config import data_factory, link_function, link_helper

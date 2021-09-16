@@ -1,19 +1,21 @@
 # this file based on http://docs.glueviz.org/en/stable/customizing_guide/viewer.html
 
 import builtins
-import my_actions
+from .my_actions import T_NodeActions
 
 
-# import hack because I need to repalce a class imported by ete3
+# import hack because I need to replace a class imported by ete3
 old_import = builtins.__import__
 def temp_import(*args, **kwargs):
     module = old_import(*args, **kwargs)
 
     if args[0] == 'node_gui_actions':
-        module._NodeActions = my_actions.T_NodeActions
+        module._NodeActions = T_NodeActions
     return module
 
 builtins.__import__ = temp_import
+
+print(builtins.__import__)
 
 from ete3.treeview.qt4_render import (
     _TreeScene,
@@ -35,7 +37,7 @@ from glue.core.exceptions import IncompatibleAttribute
 
 from collections import defaultdict
 
-from qt4_gui_modified import _TreeView
+from .qt4_gui_modified import _TreeView
 
 import ete3
 
@@ -530,6 +532,6 @@ class PanTool(CheckableTool):
 
 
 
-from glue.config import qt_client
+#from glue.config import qt_client
 
-qt_client.add(TreeDataViewer)
+#qt_client.add(TreeDataViewer)

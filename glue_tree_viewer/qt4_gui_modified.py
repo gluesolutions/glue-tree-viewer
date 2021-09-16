@@ -54,7 +54,7 @@ import qtpy.QtCore as QtCore
 from qtpy.QtCore import Qt, QPointF, QLineF
 from qtpy.QtGui import *
 
-import my_actions as ma
+#import .my_actions as ma
 
 
 from ete3.treeview.qt4_render import render
