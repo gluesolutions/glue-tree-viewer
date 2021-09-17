@@ -129,7 +129,7 @@ SHOW_TEXT = OrderedDict([(True, "Yes"), (False, "No")])
 
 INCLUDE_CHILDREN = OrderedDict([(True, "Yes"), (False, "No")])
 
-ORIENTATION = OrderedDict([(0, "Left to Right"), (270, "Top to Bottom")])
+ORIENTATION = OrderedDict([ (90, "Bottom to Top"), (0, "Left to Right")])
 
 
 def layout(node):
@@ -186,7 +186,7 @@ import traceback
 
 
 class TreeDataViewer(DataViewer):
-    LABEL = "ete3 based Tree Viewer"
+    LABEL = "Tree Viewer"
 
     _state_cls = TreeViewerState
     _options_cls = TreeViewerStateWidget
@@ -218,9 +218,12 @@ class TreeDataViewer(DataViewer):
 
         self.default_style = lambda: ete3.NodeStyle()
         self.tree_style = ete3.TreeStyle()
+        self.tree_style.show_scale = False
+        self.tree_style.scale = 0.05
         self.tree_style.layout_fn = layout
 
         self._on_layers_changed(None)
+        #self._on_orientation_change(90) #Hack to make orientation correct for three-bears FIXME
 
 
 
@@ -254,7 +257,7 @@ class TreeDataViewer(DataViewer):
         for node in data.tdata.traverse():
             st = self.default_style()
             node.set_style(st)
-
+        self.tree_style.rotation = 90 #HACK for three-bears FIXME
         self.init_treedrawing(data)
         return super(TreeDataViewer, self).add_data(data)
 
