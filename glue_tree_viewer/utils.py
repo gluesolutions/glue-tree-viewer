@@ -4,6 +4,7 @@ from glue.core.component import CategoricalComponent
 from glue.core.component_id import ComponentID
 from glue.core.data import BaseCartesianData, Data
 from glue.utils import view_shape
+from glue.core.component_link import KeyLink
 
 import ete3
 #from .viewer import TreeLayerState #Do we need this?
@@ -125,18 +126,18 @@ def read_dendro(fname):
 # https://github.com/glue-viz/glue/blob/241edb32ab6f4a82adf02ef3711c16342fd214ed/glue/plugins/dendro_viewer/qt/data_viewer.py#L92
 
 
-@link_helper(category="Tree Viewer")
+@link_helper(category="Link by ID")
 class Link_Index_By_Value(LinkCollection):
     # inherit from linkCollection to skip this line https://github.com/glue-viz/glue/blob/5a878451a1636b141a687a482239a37287a32198/glue/config.py#L790
     cid_independent = False
 
-    display = "Link By Value"
-    description = "WARNING: once you close this dialog, this link can only be removed by restarting glue"
+    display = "Link by ID"
+    description = "Link two datasets by a common ID (for example, if two datasets have the same experiment ID)"
 
     labels1 = ["first value column"]
     labels2 = ["second value column"]
 
-    _links = []
+    
 
     def __init__(self, *args, cids1=None, cids2=None, data1=None, data2=None):
         # only support linking by one value now, even tho link_by_value supports multiple
@@ -149,6 +150,10 @@ class Link_Index_By_Value(LinkCollection):
         self.cids2 = cids2
 
         data1.join_on_key(data2, cids1[0], cids2[0])
+        
+        self._links = [KeyLink()]
+        
+        
 
 
 # based on https://sourcegraph.com/github.com/glue-viz/glue/-/blob/glue/plugins/coordinate_helpers/link_helpers.py?L42:33
