@@ -129,7 +129,7 @@ SHOW_TEXT = OrderedDict([(True, "Yes"), (False, "No")])
 
 INCLUDE_CHILDREN = OrderedDict([(True, "Yes"), (False, "No")])
 
-ORIENTATION = OrderedDict([ (90, "Bottom to Top"), (0, "Left to Right")])
+ORIENTATION = OrderedDict([ (270, "Bottom to Top"), (180, "Left to Right")])
 
 
 def layout(node):
@@ -138,12 +138,12 @@ def layout(node):
 
 class TreeViewerState(ViewerState):
     node_att = SelectionCallbackProperty(
-        docstring="the node type to display on the tree viewer"
+        docstring="Node type to display on the tree viewer"
     )
-    showtext_att = SelectionCallbackProperty(docstring="to show the text on the tree")
-    select_children_att = SelectionCallbackProperty(docstring="to include children in selections")
+    showtext_att = SelectionCallbackProperty(docstring="Show the text on the tree")
+    select_children_att = SelectionCallbackProperty(docstring="Include children in selections")
 
-    orientation_att = SelectionCallbackProperty(docstring="how the tree is rotated")
+    orientation_att = SelectionCallbackProperty(docstring="Tree rotation")
 
     def __init__(self, *args, **kwargs):
 
@@ -219,8 +219,9 @@ class TreeDataViewer(DataViewer):
         self.default_style = lambda: ete3.NodeStyle()
         self.tree_style = ete3.TreeStyle()
         self.tree_style.show_scale = False
-        self.tree_style.scale = 0.05
-        self.tree_style.layout_fn = layout
+        self.tree_style.scale = 0.10
+        #self.tree_style.layout_fn = None#layout
+        self.tree_style.orientation = 1 #This does not seem to do anything, maybe because...
 
         self._on_layers_changed(None)
         #self._on_orientation_change(90) #Hack to make orientation correct for three-bears FIXME
@@ -257,7 +258,8 @@ class TreeDataViewer(DataViewer):
         for node in data.tdata.traverse():
             st = self.default_style()
             node.set_style(st)
-        self.tree_style.rotation = 90 #HACK for three-bears FIXME
+        self.tree_style.rotation = 270 #HACK for three-bears to make the experiment IDs line up by default
+        self.tree_style.orientation = 1 #Also a HACK, but one that seems to be good for gene data
         self.init_treedrawing(data)
         return super(TreeDataViewer, self).add_data(data)
 
